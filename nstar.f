@@ -944,9 +944,9 @@ C             MCMC Version 1.1 - 2020 May 1
 C             S. Terry
 C
 C Markov chain Monte Carlo routine to fit blended
-C targets (two or three). Parameters that are 
-C currently fitted are star centroids (x,y), flux
-C ratio (f), and total flux (z).
+C targets (two or three) or the trivial case (one star).
+C Parameters that are currently fitted are star centroids 
+C (x,y), flux ratio (f), total flux (z), and chi^2.
 C
 C--------------------
 C===================================================================================
