@@ -944,9 +944,9 @@ C             MCMC Version 1.1 - 2020 May 1
 C             S. Terry
 C
 C Markov chain Monte Carlo routine to fit blended
-C targets (two or three) or the trivial case (one star).
-C Parameters that are currently fitted are star centroids 
-C (x,y), flux ratio (f), total flux (z), and chi^2.
+C targets (two or three). Parameters that are 
+C currently fitted are star centroids (x,y), flux
+C ratio (f), and total flux (z).
 C
 C--------------------
 C===================================================================================
@@ -984,12 +984,12 @@ C              1-STAR-FIT
 C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
  9500 WRITE(*,*) "Degrees of Freedom = ",
-     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+6
+     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+4
       WRITE(*,*)  "Number of MCMC Iterations:"
       READ(*,*) Steps
       WRITE(*,*) "Initial Star x,y:"
       READ(*,*) IX10_IN,IY10_IN
-      WRITE(*,*) "Initial Flux Contribution (1.0 for 1-star fit):"
+      WRITE(*,*) "Initial Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
 
       IX10 = IX10_IN !initial source x
@@ -1016,7 +1016,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
          PTOT = PTOT + ABS((DATA(IX,IY)-SKYBAR))
          FTOT = FTOT + FU(U)
          U = U + 1
-         WRITE(*,*) IX,IY,PTOT,FTOT, (PTOT/FTOT)
+C         WRITE(*,*) IX,IY,PTOT,FTOT, (PTOT/FTOT)
          ENDDO
          ENDDO
            Z0 = (PTOT/FTOT)
@@ -1149,8 +1149,10 @@ C         WRITE(*,*) EEM,EMIN,EE0
       ENDIF
       ENDIF
       ENDDO
+       WRITE(*,*) "      X1               Y1             F_TOT        
+     .   CHI2"
        WRITE(*,*) X1MIN,Y1MIN,
-     .            FMIN,ZMIN,EMIN
+     .            ZMIN,EMIN
        GO TO 9000
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
 C==============================================================
@@ -1159,7 +1161,7 @@ C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
        
  9600 WRITE(*,*) "Degrees of Freedom = ",
-     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+6
+     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+7
       WRITE(*,*)  "Number of MCMC Iterations:"
       READ(*,*) Steps
       WRITE(*,*) "Initial Source x,y:"
@@ -1348,6 +1350,8 @@ C         WRITE(*,*) EEM,EMIN,EE0
       ENDIF
       ENDIF
       ENDDO
+       WRITE(*,*) "      X1               Y1               X2        
+     .    Y2            F_RATIO          F_TOTAL            CHI2"
        WRITE(*,*) X1MIN,Y1MIN,
      .            X2MIN,Y2MIN,FMIN,ZMIN,EMIN
        GO TO 9000
@@ -1357,7 +1361,7 @@ C              3-STAR-FIT
 C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
  9700 WRITE(*,*) "Degrees of Freedom = ",
-     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+6
+     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+11
       WRITE(*,*)  "Number of MCMC Iterations:"
       READ(*,*) Steps
       WRITE(*,*) "Initial Source x,y:"
@@ -1368,7 +1372,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IX30_IN,IY30_IN
       WRITE(*,*) "Initial Source Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
-      WRITE(*,*) "Initial Blend Contribution (0.0 - 0.3):"
+      WRITE(*,*) "Initial Blend Contribution (0.0 - 1.0):"
       READ(*,*) IFB0_IN
 
       IX10 = IX10_IN !initial source x
@@ -1405,7 +1409,7 @@ C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
         PPU(U) = ABS((DATA(IX,IY) - SKYBAR)) !raw pixel value - sky
         U = U + 1
-        WRITE(*,*) IX,IY,DATA(IX,IY),FU(U)
+C        WRITE(*,*) IX,IY,DATA(IX,IY),FU(U)
          ENDDO
          ENDDO
         PTOT = 0
@@ -1416,7 +1420,7 @@ C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR
          PTOT = PTOT + ABS((DATA(IX,IY)-SKYBAR))
          FTOT = FTOT + FU(U)
          U = U + 1
-         WRITE(*,*) IX,IY,PTOT,FTOT, (PTOT/FTOT)
+C         WRITE(*,*) IX,IY,PTOT,FTOT, (PTOT/FTOT)
          ENDDO
          ENDDO
            Z0 = (PTOT/FTOT)
@@ -1587,8 +1591,11 @@ C         WRITE(*,*) EEM,EMIN,EE0
       ENDIF
       ENDIF
       ENDDO
-       WRITE(*,*) X1MIN,Y1MIN,
-     .            X2MIN,Y2MIN,X3MIN,Y3MIN,FMIN,FBMIN,ZMIN,EMIN
+       WRITE(*,*) "      X1               Y1               X2        
+     .    Y2               X3               Y3            F1_RATIO
+     .        F2_RATIO       F_TOTAL            CHI2"
+       WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
+     .       FMIN,FBMIN,ZMIN,EMIN
 C------------------------------------
 C----------END OF MCMC-------------------------------------------------
 C------------------------------------
