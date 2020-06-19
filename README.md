@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-DAOPHOT-MCMC is a modified version of the subroutine NSTAR.F which implements a Markov chain Monte Carlo (MCMC) routine for fitting highly blended stellar positions and fluxes. This code is installed and implemented within the overall [DAOPHOT-II](http://www.star.bris.ac.uk/~mbt/daophot/) structure. Detailed descriptions of the major parts of this routine are given in the User's Manual.
+DAOPHOT-MCMC is a modified version of the subroutine NSTAR.F which implements a Markov chain Monte Carlo (MCMC) routine for fitting highly blended stellar positions and fluxes. This code is installed and implemented within the overall [DAOPHOT-II](http://www.star.bris.ac.uk/~mbt/daophot/) structure. Detailed descriptions of the major parts of this routine are given in the [User's Manual](https://github.com/skterry/DAOPHOT-MCMC/blob/master/User_Manual.pdf).
 
 Some of the functionality includes:
 
@@ -13,10 +13,6 @@ Some of the functionality includes:
 The User's Manual for DAOPHOT-MCMC is updated frequently, and can be found [here](https://github.com/skterry/DAOPHOT-MCMC/blob/master/User_Manual.pdf).
 
 Various MCMC outputs can be seen below:
-
-![](Example_putput/gif-change.gif)
-
-![](Example_output/stellar_contours.png)
 
 ![](Example_output/separation_flux_contour.png)
 
