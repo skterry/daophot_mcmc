@@ -14,5 +14,9 @@ The User's Manual for DAOPHOT-MCMC is updated frequently, and can be found [here
 
 Various MCMC outputs can be seen below:
 
-![](https://github.com/skterry/DAOPHOT-MCMC/blob/master/Example_output/gif-change.gif)
+![gif 1](https://github.com/skterry/DAOPHOT-MCMC/blob/master/Example_output/gif-change.gif)
+
+![image 1](https://github.com/skterry/DAOPHOT-MCMC/blob/master/Example_output/stellar_contours.png)
+
+![image 2](https://github.com/skterry/DAOPHOT-MCMC/blob/master/Example_output/separation_flux_contour.png)
 
