@@ -73,7 +73,7 @@ C
       REAL FMIN, FBMIN, EMIN, ZMIN
       REAL IX1M, IY1M, IX2M, IY2M, EEM_CHI2
       REAL IX3M, IY3M, IFBM
-      REAL IFM, FIT_STARS
+      REAL IFM, FIT_STARS, NLINES
       REAL, DIMENSION(780) :: PPU_MIN
       REAL PROB, PROB_RAND
       REAL*8 EE0
@@ -1351,6 +1351,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
         WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,EEM
       ENDIF
       ENDIF
+      IF (MOD(IT,50000)==0) WRITE(*,*) "Iteration: ", IT
       ENDDO
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2              SEP            F_RATIO          F_TOTAL
