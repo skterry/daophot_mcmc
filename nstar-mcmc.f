@@ -2,6 +2,9 @@
      .     NCOL, NROW, MAXCOL, WATCH, FITRAD, E1, E2)
 C
 C=======================================================================
+C--------------------
+C             MCMC Version 1.1 - 2020 June 10
+C=======================================================================
 C
 C Photometry for many stars by simultaneous multiple PSF fits.
 C
@@ -951,14 +954,7 @@ C ratio (f), and total flux (z).
 C
 C--------------------
 C===================================================================================
-C      WRITE(*,*) SKYBAR, SKY
-C      IXMIN = 885
-C      IXMAX = 908
-C      IYMIN = 811
-C      IYMAX = 833
-C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX !- 879,908,811,836
       OPEN(25,FILE='mcmc_fit.dat',STATUS='UNKNOWN')
-C      OPEN(26,FILE='best_fits.dat',STATUS='NEW')
 
       IX10_IN = 0.0
       IY10_IN = 0.0
