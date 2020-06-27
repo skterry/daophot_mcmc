@@ -11,8 +11,3 @@ Some of the DAOPHOT-MCMC functionality includes:
 * Parameter constraints for best-fit MCMC.
 
 The User's Manual for DAOPHOT-MCMC is a work in progress, and can be found [here](https://github.com/skterry/DAOPHOT-MCMC/blob/master/User_Manual.pdf).
-
-An example MCMC simulation output can be seen below:
-
-![gif 1](https://github.com/skterry/DAOPHOT-MCMC/blob/master/Example_output/gif-change.gif)
-
