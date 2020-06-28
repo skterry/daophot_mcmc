@@ -1149,6 +1149,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
         WRITE(25,*) X1,Y1,IFM*0.001,ZM,EEM
       ENDIF
       ENDIF
+      IF (MOD(IT,50000)==0) WRITE(*,*) "Iteration: ", IT
       ENDDO
        WRITE(*,*) "      X1               Y1             F_TOT        
      .   CHI2"
@@ -1595,6 +1596,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
      .        ZM,EEM
       ENDIF
       ENDIF
+      IF (MOD(IT,50000)==0) WRITE(*,*) "Iteration: ", IT
       ENDDO
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2               X3               Y3            F1_RATIO
