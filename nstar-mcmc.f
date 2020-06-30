@@ -88,7 +88,8 @@ C
       INTEGER U, US, Counter
       INTEGER NIMU, NIT
       INTEGER NSTU
-      REAL, DIMENSION(8) :: RNARRAY
+      REAL, DIMENSION(9) :: RNARRAY
+      CHARACTER(LEN=15) A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,A11,A12,A13,A14
 
       REAL LOBAD, DF, DX, DY, ERR, PSFMAG, BRIGHT, XPSF, YPSF
       REAL SEPCRIT, PSFRAD, RADIUS, THRESH, AP1, PHPADU, RONOIS
@@ -952,13 +953,23 @@ C
 C--------------------
 C===================================================================================
 C      WRITE(*,*) SKYBAR, SKY
-C      IXMIN = 885
-C      IXMAX = 908
-C      IYMIN = 811
-C      IYMAX = 833
-C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX !- 879,908,811,836
+C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX
+      A1 = "X1_CENTER"
+      A2 = "Y1_CENTER"
+      A3 = "X2_CENTER"
+      A4 = "Y2_CENTER"
+      A5 = "SEPARATION"
+      A6 = "FRATIO"
+      A7 = "FTOTAL"
+      A8 = "CHI2"
+
+      A9 = "X3_CENTER"
+      A10 = "Y3_CENTER"
+      A11 = "S1-2_SEP"
+      A12 = "S1-3_SEP"
+      A13 = "S1-2_FRATIO"
+      A14 = "S1-3_FRATIO"
       OPEN(25,FILE='mcmc_fit.dat',STATUS='UNKNOWN')
-C      OPEN(26,FILE='best_fits.dat',STATUS='NEW')
 
       IX10_IN = 0.0
       IY10_IN = 0.0
@@ -992,6 +1003,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IX10_IN,IY10_IN
       WRITE(*,*) "Initial Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
+      WRITE(25,*) A1,A2,A7,A8       
 
       IX10 = IX10_IN !initial source x
       IY10 = IY10_IN !initial source y
@@ -1128,7 +1140,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
         IF0 = IFM
         Z0 = ZM
         EE0 = EEM
-        WRITE(25,*) X1,Y1,IFM*0.001,ZM,EEM
+        WRITE(25,*) X1,Y1,ZM,EEM
          U = 1
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
@@ -1146,10 +1158,10 @@ C         WRITE(*,*) EEM,EMIN,EE0
         IF0 = IFM
         Z0 = ZM
         EE0 = EEM
-        WRITE(25,*) X1,Y1,IFM*0.001,ZM,EEM
+        WRITE(25,*) X1,Y1,ZM,EEM
       ENDIF
       ENDIF
-      IF (MOD(IT,50000)==0) WRITE(*,*) "Iteration: ", IT
+      IF (MOD(IT,50000)==0) WRITE(*,*) IT
       ENDDO
        WRITE(*,*) "      X1               Y1             F_TOT        
      .   CHI2"
@@ -1160,8 +1172,8 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 C==============================================================
 C              2-STAR-FIT
 C==============================================================
-C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
-       
+C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ 
  9600 WRITE(*,*) "Degrees of Freedom =",
      .((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+7
       WRITE(*,*)  "Number of MCMC Iterations:"
@@ -1172,6 +1184,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IX20_IN,IY20_IN
       WRITE(*,*) "Initial Source Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
+      WRITE(25,*) A1,A2,A3,A4,A5,A6,A7,A8       
 
       IX10 = IX10_IN !initial source x
       IY10 = IY10_IN !initial source y
@@ -1352,7 +1365,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
         WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,EEM
       ENDIF
       ENDIF
-      IF (MOD(IT,50000)==0) WRITE(*,*) "Iteration: ", IT
+      IF (MOD(IT,50000)==0) WRITE(*,*) IT
       ENDDO
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2              SEP            F_RATIO          F_TOTAL
@@ -1380,6 +1393,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IF0_IN
       WRITE(*,*) "Initial Blend Contribution (0.0 - 1.0):"
       READ(*,*) IFB0_IN
+C      WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A8
 
       IX10 = IX10_IN !initial source x
       IY10 = IY10_IN !initial source y
@@ -1395,7 +1409,7 @@ C      IXMIN = 665
 C      IXMAX = 710
 C      IYMIN = 365
 C      IYMAX = 410
-C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR
+      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR
 
         X1 = 1.0*IX10
         Y1 = 1.0*IY10
@@ -1409,13 +1423,13 @@ C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR
       DO IY=IYMIN,IYMAX
         FU(U)=(F )*USEPSF(IPSTYP, IX-X1, IY-Y1, BRIGHT,
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
-     .  + (1-F+FB)*USEPSF(IPSTYP, IX-X2, IY-Y2, BRIGHT,
+     .  + (1-F-FB)*USEPSF(IPSTYP, IX-X2, IY-Y2, BRIGHT,
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
      .  + (FB )*USEPSF(IPSTYP, IX-X3, IY-Y3, BRIGHT,
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
         PPU(U) = ABS((DATA(IX,IY) - SKYBAR)) !raw pixel value - sky
         U = U + 1
-C        WRITE(*,*) IX,IY,DATA(IX,IY),FU(U)
+        WRITE(*,*) IX,IY,DATA(IX,IY),FU(U)
          ENDDO
          ENDDO
         PTOT = 0
@@ -1482,7 +1496,7 @@ C      CALL RANDOM_SEED()
       IX3M = IX10 + (200*RNARRAY(5)-100)/500
 03      IY3M = IY10 + (200*RNARRAY(6)-100)/500
 02      IFM = IF0 + (200*RNARRAY(7)-100)/8
-01      IFBM = IFB0 + (200*RNARRAY(7)-100)/8
+01      IFBM = IFB0 + (200*RNARRAY(8)-100)/8
 
 C      IF ((IFM .GE. 1000) .OR. (IFM .LE. 0)) THEN
 C       GO TO 02
@@ -1580,7 +1594,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
           ENDDO
           ENDDO
       ELSE
-        PROB_RAND = RNARRAY(8)
+        PROB_RAND = RNARRAY(9)
         PROB = EXP(-(EEM-EE0)/2.00)
         IF (PROB .GT. PROB_RAND) THEN
         IX10 = IX1M
@@ -1596,7 +1610,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
      .        ZM,EEM
       ENDIF
       ENDIF
-      IF (MOD(IT,50000)==0) WRITE(*,*) "Iteration: ", IT
+      IF (MOD(IT,50000)==0) WRITE(*,*) IT
       ENDDO
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2               X3               Y3            F1_RATIO
