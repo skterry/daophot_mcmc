@@ -74,7 +74,7 @@ C
       REAL IX1M, IY1M, IX2M, IY2M, EEM_CHI2
       REAL IX3M, IY3M, IFBM
       REAL IFM, FIT_STARS, NLINES
-      REAL, DIMENSION(780) :: PPU_MIN
+      REAL, ALLOCATABLE :: PPU_MIN(:)
       REAL PROB, PROB_RAND
       REAL*8 EE0
       REAL*8 PTOT, FTOT
@@ -82,9 +82,9 @@ C
       REAL*8 CHISQ, CHISQ_MIN
       REAL*8 F, F1, F2
       REAL SSEP, ZM, EEM
-      REAL, DIMENSION(780) :: FU, FU_MIN
-      REAL, DIMENSION(780) :: SGU, SGL, SGU2, PPU
-      INTEGER IF2, Steps, IT
+      REAL, ALLOCATABLE :: FU(:), FU_MIN(:)
+      REAL, ALLOCATABLE :: SGU(:), SGL(:), SGU2(:), PPU(:)
+      INTEGER IF2, Steps, IT, GRIDSIZE
       INTEGER U, US, Counter
       INTEGER NIMU, NIT
       INTEGER NSTU
@@ -954,6 +954,12 @@ C--------------------
 C===================================================================================
 C      WRITE(*,*) SKYBAR, SKY
 C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX
+
+      GRIDSIZE = ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))
+      ALLOCATE (PPU_MIN(GRIDSIZE),FU(GRIDSIZE),FU_MIN(GRIDSIZE),
+     . SGU(GRIDSIZE),SGL(GRIDSIZE),SGU2(GRIDSIZE),PPU(GRIDSIZE))
+
+      WRITE(*,*) GRIDSIZE
       A1 = "X1_CENTER"
       A2 = "Y1_CENTER"
       A3 = "X2_CENTER"
@@ -1003,7 +1009,8 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IX10_IN,IY10_IN
       WRITE(*,*) "Initial Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
-      WRITE(25,*) A1,A2,A7,A8       
+      WRITE(25,*) A1,A2,A7,A8
+C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR
 
       IX10 = IX10_IN !initial source x
       IY10 = IY10_IN !initial source y
@@ -1409,7 +1416,7 @@ C      IXMIN = 665
 C      IXMAX = 710
 C      IYMIN = 365
 C      IYMAX = 410
-      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR
+C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR
 
         X1 = 1.0*IX10
         Y1 = 1.0*IY10
@@ -1429,7 +1436,7 @@ C      IYMAX = 410
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
         PPU(U) = ABS((DATA(IX,IY) - SKYBAR)) !raw pixel value - sky
         U = U + 1
-        WRITE(*,*) IX,IY,DATA(IX,IY),FU(U)
+C        WRITE(*,*) IX,IY,DATA(IX,IY),FU(U)
          ENDDO
          ENDDO
         PTOT = 0
@@ -1599,9 +1606,12 @@ C         WRITE(*,*) EEM,EMIN,EE0
         IF (PROB .GT. PROB_RAND) THEN
         IX10 = IX1M
         IX20 = IX2M
+        IX30 = IX3M
         IY10 = IY1M
         IY20 = IY2M
+        IY30 = IY3M
         IF0 = IFM
+        IFB0 = IFBM
         Z0 = ZM
         EE0 = EEM
         LSSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2)
@@ -1613,8 +1623,9 @@ C         WRITE(*,*) EEM,EMIN,EE0
       IF (MOD(IT,50000)==0) WRITE(*,*) IT
       ENDDO
        WRITE(*,*) "      X1               Y1               X2        
-     .    Y2               X3               Y3            F1_RATIO
-     .        F2_RATIO       F_TOTAL            CHI2"
+     .    Y2               X3               Y3           1-2SEP         
+     .   1-3SEP         F1_RATIO           F2_RATIO           F_TOTAL
+     .     CHI2"
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
      . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
      . 9.942*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2),
