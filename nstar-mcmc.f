@@ -959,7 +959,7 @@ C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX
       ALLOCATE (PPU_MIN(GRIDSIZE),FU(GRIDSIZE),FU_MIN(GRIDSIZE),
      . SGU(GRIDSIZE),SGL(GRIDSIZE),SGU2(GRIDSIZE),PPU(GRIDSIZE))
 
-      WRITE(*,*) GRIDSIZE
+C      WRITE(*,*) GRIDSIZE
       A1 = "X1_CENTER"
       A2 = "Y1_CENTER"
       A3 = "X2_CENTER"
@@ -1074,10 +1074,9 @@ C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
          FMIN = F
          EMIN = EE0
          ZMIN = Z0
-      WRITE (25,*) X1MIN, Y1MIN, FMIN, ZMIN, EMIN
+      WRITE (25,*) X1MIN, Y1MIN, ZMIN, EMIN
 C--------------------------------------------------------------
       DO IT = 1, Steps
-C      CALL RANDOM_SEED()
       CALL RANDOM_NUMBER(RNARRAY)
       IX1M = IX10 + (200*RNARRAY(1)-100)/500
       IY1M = IY10 + (200*RNARRAY(2)-100)/500
@@ -1267,7 +1266,6 @@ C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
      . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2), FMIN, ZMIN, EMIN
 C--------------------------------------------------------------
       DO IT = 1, Steps
-C      CALL RANDOM_SEED()
       CALL RANDOM_NUMBER(RNARRAY)
       IX1M = IX10 + (200*RNARRAY(1)-100)/500
       IY1M = IY10 + (200*RNARRAY(2)-100)/500
@@ -1490,18 +1488,19 @@ C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
          FBMIN = FB
          EMIN = EE0
          ZMIN = Z0
-      WRITE (25,*) X1MIN, Y1MIN, X2MIN, Y2MIN, X3MIN, Y3MIN, FMIN, ZMIN,
-     . EMIN
+      WRITE (25,*) X1MIN, Y1MIN, X2MIN, Y2MIN, X3MIN, Y3MIN,
+     . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
+     . 9.942*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2), FMIN, FBMIN,
+     . ZMIN, EMIN
 C--------------------------------------------------------------
       DO IT = 1, Steps
-C      CALL RANDOM_SEED()
       CALL RANDOM_NUMBER(RNARRAY)
       IX1M = IX10 + (200*RNARRAY(1)-100)/500
       IY1M = IY10 + (200*RNARRAY(2)-100)/500
       IX2M = IX20 + (200*RNARRAY(3)-100)/500
       IY2M = IY20 + (200*RNARRAY(4)-100)/500
-      IX3M = IX10 + (200*RNARRAY(5)-100)/500
-03      IY3M = IY10 + (200*RNARRAY(6)-100)/500
+      IX3M = IX30 + (200*RNARRAY(5)-100)/500
+03      IY3M = IY30 + (200*RNARRAY(6)-100)/500
 02      IFM = IF0 + (200*RNARRAY(7)-100)/8
 01      IFBM = IFB0 + (200*RNARRAY(8)-100)/8
 
@@ -1549,8 +1548,8 @@ C--------------------------------------------------------------
            DO IY=IYMIN,IYMAX
              EEM_CHI2=((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*ZM)/SGU2(U))**2
               EEM=EEM+((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*ZM)/SGU2(U))**2
+C           EEM=EEM+(((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*ZM)/SGU2(U))**2)/3
                U = U + 1
-C               WRITE(*,*) EEM
            ENDDO
            ENDDO
 C         EEM = EEM/0.235
