@@ -1495,14 +1495,14 @@ C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
 C--------------------------------------------------------------
       DO IT = 1, Steps
       CALL RANDOM_NUMBER(RNARRAY)
-      IX1M = IX10 + (200*RNARRAY(1)-100)/500
-      IY1M = IY10 + (200*RNARRAY(2)-100)/500
-      IX2M = IX20 + (200*RNARRAY(3)-100)/500
-      IY2M = IY20 + (200*RNARRAY(4)-100)/500
-      IX3M = IX30 + (200*RNARRAY(5)-100)/500
-03      IY3M = IY30 + (200*RNARRAY(6)-100)/500
-02      IFM = IF0 + (200*RNARRAY(7)-100)/8
-01      IFBM = IFB0 + (200*RNARRAY(8)-100)/8
+      IX1M = IX10 + (200*RNARRAY(1)-100)/1200
+      IY1M = IY10 + (200*RNARRAY(2)-100)/1200
+      IX2M = IX20 + (200*RNARRAY(3)-100)/1200
+      IY2M = IY20 + (200*RNARRAY(4)-100)/1200
+      IX3M = IX30 + (200*RNARRAY(5)-100)/1200
+03      IY3M = IY30 + (200*RNARRAY(6)-100)/1200
+02      IFM = IF0 + (200*RNARRAY(7)-100)/10
+01      IFBM = IFB0 + (200*RNARRAY(8)-100)/10
 
 C      IF ((IFM .GE. 1000) .OR. (IFM .LE. 0)) THEN
 C       GO TO 02
