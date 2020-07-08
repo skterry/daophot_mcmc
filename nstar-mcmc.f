@@ -76,7 +76,7 @@ C
       REAL IFM, FIT_STARS, NLINES
       REAL, ALLOCATABLE :: PPU_MIN(:)
       REAL PROB, PROB_RAND
-      REAL*8 EE0
+      REAL*8 EE0, EE0_NORM, RFAC
       REAL*8 PTOT, FTOT
       REAL*8 Z0, LSSEP, BSEP
       REAL*8 CHISQ, CHISQ_MIN
@@ -987,6 +987,9 @@ C      WRITE(*,*) GRIDSIZE
       WRITE(*,*)  "1, 2, or 3 star fit:"
       READ(*,*) FIT_STARS
 
+      WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
+      READ(*,*) RFAC
+
       IF (FIT_STARS == 1) THEN
        GO TO 9500
       ELSEIF (FIT_STARS == 2) THEN
@@ -1005,9 +1008,9 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
      . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+4
       WRITE(*,*)  "Number of MCMC Iterations:"
       READ(*,*) Steps
-      WRITE(*,*) "Initial Star x,y:"
+      WRITE(*,*) "Star x,y:"
       READ(*,*) IX10_IN,IY10_IN
-      WRITE(*,*) "Initial Flux Contribution (0.0 - 1.0):"
+      WRITE(*,*) "Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
       WRITE(25,*) A1,A2,A7,A8
 C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR
@@ -1045,18 +1048,17 @@ C         WRITE(*,*) IX,IY,PTOT,FTOT, (PTOT/FTOT)
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
 C---------Stetson Pixel Noise Calculations--------------------
-          D=0.795*FU(U)
-          DPOS=DATA(IX,IY)-D
-          SGU(U)=DPOS/PHPADU+RDNOIS+(PERERR*DPOS)**2+
-     .    (PKERR*(DPOS-SKYBAR))**2
-          SGL(U)=ABS(D)/SQRT(SGU(U))
+C          D=0.795*FU(U)
+C          DPOS=DATA(IX,IY)-D
+C          SGU(U)=DPOS/PHPADU+RDNOIS+(PERERR*DPOS)**2+
+C     .    (PKERR*(DPOS-SKYBAR))**2
+C          SGL(U)=ABS(D)/SQRT(SGU(U))
 C-------------------------------------------------------------
 C---------Simple Pixel Noise Model----------------------------
           SGU2(U)=SQRT(16.0+MAX(DATA(IX,IY),0.)
      .    +(0.01*MAX(DATA(IX,IY),0.))**2)
 C-------------------------------------------------------------
-         EE0=EE0+((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*Z0)/SGU2(U))**2 !Non-normalized chi2
-C         EE0=EE0+(((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*Z0)/SGU2(U))**2)/0.235 !normalized chi2
+        EE0=EE0+(((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*Z0)/SGU2(U))**2)/RFAC
          U = U + 1
          ENDDO
          ENDDO
@@ -1078,8 +1080,8 @@ C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
 C--------------------------------------------------------------
       DO IT = 1, Steps
       CALL RANDOM_NUMBER(RNARRAY)
-      IX1M = IX10 + (200*RNARRAY(1)-100)/500
-      IY1M = IY10 + (200*RNARRAY(2)-100)/500
+      IX1M = IX10 + (200*RNARRAY(1)-100)/300
+      IY1M = IY10 + (200*RNARRAY(2)-100)/300
 22      IFM = IF0 + (200*RNARRAY(5)-100)/8
 
 C      IF ((IFM .GE. 1000) .OR. (IFM .LE. 0)) THEN
@@ -1121,8 +1123,7 @@ C--------------------------------------------------------------
 C               WRITE(*,*) EEM
            ENDDO
            ENDDO
-C         EEM = EEM/0.235
-C         !EEM = EEM / (best-chi2/d.o.f)
+         EEM = EEM/RFAC
 C         WRITE(*,*) EEM,EMIN,EE0
         IF (EEM .LT. EMIN) THEN
               X1MIN = X1
@@ -1184,11 +1185,11 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
      .((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+7
       WRITE(*,*)  "Number of MCMC Iterations:"
       READ(*,*) Steps
-      WRITE(*,*) "Initial Source x,y:"
+      WRITE(*,*) "Star 1 x,y:"
       READ(*,*) IX10_IN,IY10_IN
-      WRITE(*,*) "Initial Lens x,y:"
+      WRITE(*,*) "Star 2 x,y:"
       READ(*,*) IX20_IN,IY20_IN
-      WRITE(*,*) "Initial Source Flux Contribution (0.0 - 1.0):"
+      WRITE(*,*) "Star 1 Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
       WRITE(25,*) A1,A2,A3,A4,A5,A6,A7,A8       
 
@@ -1231,18 +1232,17 @@ C         WRITE(*,*) IX,IY,PTOT,FTOT, (PTOT/FTOT)
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
 C---------Stetson Pixel Noise Calculations--------------------
-          D=0.795*FU(U)
-          DPOS=DATA(IX,IY)-D
-          SGU(U)=DPOS/PHPADU+RDNOIS+(PERERR*DPOS)**2+
-     .    (PKERR*(DPOS-SKYBAR))**2
-          SGL(U)=ABS(D)/SQRT(SGU(U))
+C          D=0.795*FU(U)
+C          DPOS=DATA(IX,IY)-D
+C          SGU(U)=DPOS/PHPADU+RDNOIS+(PERERR*DPOS)**2+
+C     .    (PKERR*(DPOS-SKYBAR))**2
+C          SGL(U)=ABS(D)/SQRT(SGU(U))
 C-------------------------------------------------------------
 C---------Simple Pixel Noise Model----------------------------
           SGU2(U)=SQRT(16.0+MAX(DATA(IX,IY),0.)
      .    +(0.01*MAX(DATA(IX,IY),0.))**2)
 C-------------------------------------------------------------
-         EE0=EE0+((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*Z0)/SGU2(U))**2 !Non-normalized chi2
-C         EE0=EE0+(((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*Z0)/SGU2(U))**2)/0.336 !normalized chi2
+        EE0=EE0+(((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*Z0)/SGU2(U))**2)/RFAC
          U = U + 1
          ENDDO
          ENDDO
@@ -1316,8 +1316,7 @@ C--------------------------------------------------------------
 C               WRITE(*,*) EEM
            ENDDO
            ENDDO
-C         EEM = EEM/0.336
-C         !EEM = EEM / (best-chi2/d.o.f)
+         EEM = EEM/RFAC
 C         WRITE(*,*) EEM,EMIN,EE0
         IF (EEM .LT. EMIN) THEN
               X1MIN = X1
@@ -1388,15 +1387,15 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
      . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+11
       WRITE(*,*)  "Number of MCMC Iterations:"
       READ(*,*) Steps
-      WRITE(*,*) "Initial Source x,y:"
+      WRITE(*,*) "Star 1 x,y:"
       READ(*,*) IX10_IN,IY10_IN
-      WRITE(*,*) "Initial Lens x,y:"
+      WRITE(*,*) "Star 2 x,y:"
       READ(*,*) IX20_IN,IY20_IN
-      WRITE(*,*) "Initial Blend Star x,y:"
+      WRITE(*,*) "Star 3 x,y:"
       READ(*,*) IX30_IN,IY30_IN
-      WRITE(*,*) "Initial Source Flux Contribution (0.0 - 1.0):"
+      WRITE(*,*) "Star 1 (brightest) Flux Contribution (0 - 1):"
       READ(*,*) IF0_IN
-      WRITE(*,*) "Initial Blend Contribution (0.0 - 1.0):"
+      WRITE(*,*) "Star 3 (faintest) Flux Contribution (0 - 1):"
       READ(*,*) IFB0_IN
 C      WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A8
 
@@ -1454,18 +1453,17 @@ C         WRITE(*,*) IX,IY,PTOT,FTOT, (PTOT/FTOT)
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
 C---------Stetson Pixel Noise Calculations--------------------
-          D=0.795*FU(U)
-          DPOS=DATA(IX,IY)-D
-          SGU(U)=DPOS/PHPADU+RDNOIS+(PERERR*DPOS)**2+
-     .    (PKERR*(DPOS-SKYBAR))**2
-          SGL(U)=ABS(D)/SQRT(SGU(U))
+C          D=0.795*FU(U)
+C          DPOS=DATA(IX,IY)-D
+C          SGU(U)=DPOS/PHPADU+RDNOIS+(PERERR*DPOS)**2+
+C     .    (PKERR*(DPOS-SKYBAR))**2
+C          SGL(U)=ABS(D)/SQRT(SGU(U))
 C-------------------------------------------------------------
 C---------Simple Pixel Noise Model----------------------------
           SGU2(U)=SQRT(16.0+MAX(DATA(IX,IY),0.)
      .    +(0.01*MAX(DATA(IX,IY),0.))**2)
 C-------------------------------------------------------------
-         EE0=EE0+((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*Z0)/SGU2(U))**2 !Non-normalized chi2
-C         EE0=EE0+(((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*Z0)/SGU2(U))**2)/0.235 !normalized chi2
+        EE0=EE0+(((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*Z0)/SGU2(U))**2)/RFAC
          U = U + 1
          ENDDO
          ENDDO
@@ -1552,8 +1550,7 @@ C           EEM=EEM+(((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*ZM)/SGU2(U))**2)/3
                U = U + 1
            ENDDO
            ENDDO
-C         EEM = EEM/0.235
-C         !EEM = EEM / (best-chi2/d.o.f)
+         EEM = EEM/RFAC
 C         WRITE(*,*) EEM,EMIN,EE0
         IF (EEM .LT. EMIN) THEN
               X1MIN = X1
