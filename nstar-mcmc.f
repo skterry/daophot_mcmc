@@ -942,7 +942,7 @@ C      GO TO 2000
  9400 CONTINUE 
 C===================================================================================
 C--------------------
-C             MCMC Version 1.1 - 2020 June 10
+C             MCMC Version 1.2 - 2020 July 7
 C             S. Terry
 C
 C Markov chain Monte Carlo routine to fit blended
@@ -987,9 +987,6 @@ C      WRITE(*,*) GRIDSIZE
       WRITE(*,*)  "1, 2, or 3 star fit:"
       READ(*,*) FIT_STARS
 
-      WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
-      READ(*,*) RFAC
-
       IF (FIT_STARS == 1) THEN
        GO TO 9500
       ELSEIF (FIT_STARS == 2) THEN
@@ -1004,8 +1001,10 @@ C==============================================================
 C              1-STAR-FIT
 C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
- 9500 WRITE(*,*) "Degrees of Freedom = ",
+ 9500 WRITE(*,"(a,I4.2)") "Degrees of Freedom = ",
      . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+4
+      WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
+      READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
       READ(*,*) Steps
       WRITE(*,*) "Star x,y:"
@@ -1168,7 +1167,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
         WRITE(25,*) X1,Y1,ZM,EEM
       ENDIF
       ENDIF
-      IF (MOD(IT,50000)==0) WRITE(*,*) IT
+      IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
       ENDDO
        WRITE(*,*) "      X1               Y1             F_TOT        
      .   CHI2"
@@ -1181,8 +1180,10 @@ C              2-STAR-FIT
 C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  
- 9600 WRITE(*,*) "Degrees of Freedom =",
+ 9600 WRITE(*,"(a,I4.2)") "Degrees of Freedom =",
      .((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+7
+      WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
+      READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
       READ(*,*) Steps
       WRITE(*,*) "Star 1 x,y:"
@@ -1369,7 +1370,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
         WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,EEM
       ENDIF
       ENDIF
-      IF (MOD(IT,50000)==0) WRITE(*,*) IT
+      IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
       ENDDO
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2              SEP            F_RATIO          F_TOTAL
@@ -1383,8 +1384,10 @@ C==============================================================
 C              3-STAR-FIT
 C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
- 9700 WRITE(*,*) "Degrees of Freedom = ",
+ 9700 WRITE(*,"(a,I4.2)") "Degrees of Freedom = ",
      . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+11
+      WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
+      READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
       READ(*,*) Steps
       WRITE(*,*) "Star 1 x,y:"
@@ -1616,7 +1619,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
      .        ZM,EEM
       ENDIF
       ENDIF
-      IF (MOD(IT,50000)==0) WRITE(*,*) IT
+      IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
       ENDDO
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2               X3               Y3           1-2SEP         
