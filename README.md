@@ -7,7 +7,7 @@ DAOPHOT-MCMC is a modified version of the subroutine NSTAR.F which implements a 
 Some of the DAOPHOT-MCMC functionality includes:
 
 * Simultaneous 1-star, 2-star, and 3-star PSF fitting.
-* Chi^2 minimization to determine best-fit position, separation, flux ratio, and total flux.
+* Chi^2 minimization to determine best-fit positions, separations, flux ratios, and total flux.
 * Parameter constraints for best-fit MCMC.
 
 The User's Manual for DAOPHOT-MCMC is a work in progress, and can be found [here](https://github.com/skterry/DAOPHOT-MCMC/blob/master/User_Manual.pdf).
