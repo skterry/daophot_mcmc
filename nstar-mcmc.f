@@ -1168,7 +1168,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
       ENDIF
       ENDIF
       IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
-      ENDDO
+      ENDDO !End main MCMC iteration
        WRITE(*,*) "      X1               Y1             F_TOT        
      .   CHI2"
        WRITE(*,*) X1MIN,Y1MIN,
@@ -1274,10 +1274,10 @@ C--------------------------------------------------------------
 13      IY2M = IY20 + (200*RNARRAY(4)-100)/500
 12      IFM = IF0 + (200*RNARRAY(5)-100)/8
 
-      IF ((IFM .GE. 1000) .OR. (IFM .LE. 0)) THEN
-       GO TO 12
-      ELSE
-      ENDIF
+C      IF ((IFM .GE. 1000) .OR. (IFM .LE. 0)) THEN
+C       GO TO 12
+C      ELSE
+C      ENDIF
 C--------------------------------------------------------------
         X1 = 1.0*IX1M
         Y1 = 1.0*IY1M
@@ -1338,6 +1338,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
         ELSE
         ENDIF
       IF (EEM .LE. EE0) THEN
+C      IF (9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) .LE. 100) THEN
         IX10 = IX1M
         IX20 = IX2M
         IY10 = IY1M
@@ -1359,6 +1360,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
         PROB_RAND = RNARRAY(6)
         PROB = EXP(-(EEM-EE0)/2.00)
         IF (PROB .GT. PROB_RAND) THEN
+C        IF (9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) .LE. 100) THEN
         IX10 = IX1M
         IX20 = IX2M
         IY10 = IY1M
@@ -1371,7 +1373,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
       ENDIF
       ENDIF
       IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
-      ENDDO
+      ENDDO !End main MCMC iteration
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2              SEP            F_RATIO          F_TOTAL
      .    CHI2"
@@ -1620,7 +1622,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
       ENDIF
       ENDIF
       IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
-      ENDDO
+      ENDDO !End main MCMC iteration
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2               X3               Y3           1-2SEP         
      .   1-3SEP         F1_RATIO           F2_RATIO           F_TOTAL
