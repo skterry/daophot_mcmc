@@ -1035,7 +1035,7 @@ C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
-         PTOT = PTOT + ABS((DATA(IX,IY)-SKYBAR))
+         PTOT = PTOT + PPU(U)
          FTOT = FTOT + FU(U)
          U = U + 1
 C         WRITE(*,*) IX,IY,PTOT,FTOT, (PTOT/FTOT)
@@ -1106,7 +1106,7 @@ C--------------------------------------------------------------
            U = 1
            DO IX=IXMIN,IXMAX
            DO IY=IYMIN,IYMAX 
-              PTOT = PTOT + ABS((DATA(IX,IY)-SKYBAR))
+              PTOT = PTOT + PPU(U)
               FTOT = FTOT + FU(U)
               U = U + 1
               ENDDO
@@ -1221,7 +1221,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
-         PTOT = PTOT + ABS((DATA(IX,IY)-SKYBAR))
+         PTOT = PTOT + PPU(U)
          FTOT = FTOT + FU(U)
          U = U + 1
 C         WRITE(*,*) IX,IY,PTOT,FTOT, (PTOT/FTOT)
@@ -1247,6 +1247,9 @@ C-------------------------------------------------------------
          U = U + 1
          ENDDO
          ENDDO
+C         EE0 = EE0 + EXP(((FU(U)*Z0-6284)/231.565)**2) 
+C      SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
+C        EE0 = EE0 + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
 C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
         U = 1 
         DO IX=IXMIN,IXMAX
@@ -1301,7 +1304,7 @@ C--------------------------------------------------------------
            U = 1
            DO IX=IXMIN,IXMAX
            DO IY=IYMIN,IYMAX 
-              PTOT = PTOT + ABS((DATA(IX,IY)-SKYBAR))
+              PTOT = PTOT + PPU(U)
               FTOT = FTOT + FU(U)
               U = U + 1
               ENDDO
@@ -1317,6 +1320,9 @@ C--------------------------------------------------------------
 C               WRITE(*,*) EEM
            ENDDO
            ENDDO
+C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2) 
+C      SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
+C        EEM = EEM + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
 C         WRITE(*,*) EEM,EMIN,EE0
         IF (EEM .LT. EMIN) THEN
@@ -1338,7 +1344,6 @@ C         WRITE(*,*) EEM,EMIN,EE0
         ELSE
         ENDIF
       IF (EEM .LE. EE0) THEN
-C      IF (9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) .LE. 100) THEN
         IX10 = IX1M
         IX20 = IX2M
         IY10 = IY1M
@@ -1360,7 +1365,6 @@ C      IF (9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) .LE. 100) THEN
         PROB_RAND = RNARRAY(6)
         PROB = EXP(-(EEM-EE0)/2.00)
         IF (PROB .GT. PROB_RAND) THEN
-C        IF (9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) .LE. 100) THEN
         IX10 = IX1M
         IX20 = IX2M
         IY10 = IY1M
@@ -1370,7 +1374,7 @@ C        IF (9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) .LE. 100) THEN
         EE0 = EEM
         SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2)
         WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,EEM
-      ENDIF
+        ENDIF
       ENDIF
       IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
       ENDDO !End main MCMC iteration
@@ -1446,7 +1450,7 @@ C        WRITE(*,*) IX,IY,DATA(IX,IY),FU(U)
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
-         PTOT = PTOT + ABS((DATA(IX,IY)-SKYBAR))
+         PTOT = PTOT + PPU(U)
          FTOT = FTOT + FU(U)
          U = U + 1
 C         WRITE(*,*) IX,IY,PTOT,FTOT, (PTOT/FTOT)
@@ -1472,6 +1476,8 @@ C-------------------------------------------------------------
          U = U + 1
          ENDDO
          ENDDO
+C      SSEP = 9.942*SQRT((X1-X3)**2+(Y1-Y3)**2) !9.942 = NIRC2 pix scale
+C        EE0 = EE0 + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
 C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
         U = 1 
         DO IX=IXMIN,IXMAX
@@ -1539,7 +1545,7 @@ C--------------------------------------------------------------
            U = 1
            DO IX=IXMIN,IXMAX
            DO IY=IYMIN,IYMAX 
-              PTOT = PTOT + ABS((DATA(IX,IY)-SKYBAR))
+              PTOT = PTOT + PPU(U)
               FTOT = FTOT + FU(U)
               U = U + 1
               ENDDO
@@ -1555,6 +1561,8 @@ C           EEM=EEM+(((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*ZM)/SGU2(U))**2)/3
                U = U + 1
            ENDDO
            ENDDO
+C      SSEP = 9.942*SQRT((X1-X3)**2+(Y1-Y3)**2) !9.942 = NIRC2 pix scale
+C        EE0 = EE0 + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
 C         WRITE(*,*) EEM,EMIN,EE0
         IF (EEM .LT. EMIN) THEN
