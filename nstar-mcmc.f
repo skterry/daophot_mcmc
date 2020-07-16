@@ -1181,7 +1181,7 @@ C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  
  9600 WRITE(*,"(a,I4.2)") "Degrees of Freedom =",
-     .((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+7
+     .((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+6
       WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
       READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
@@ -1391,7 +1391,7 @@ C              3-STAR-FIT
 C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
  9700 WRITE(*,"(a,I4.2)") "Degrees of Freedom = ",
-     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+11
+     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+9
       WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
       READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
