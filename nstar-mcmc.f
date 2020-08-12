@@ -74,7 +74,7 @@ C
       REAL IX1M, IY1M, IX2M, IY2M, EEM_CHI2
       REAL IX3M, IY3M, IFBM
       REAL IFM, FIT_STARS, NLINES
-      REAL, ALLOCATABLE :: PPU_MIN(:)
+      REAL, ALLOCATABLE :: PPU_MIN(:), EMIN_CHI2(:), EMINPIX(:)
       REAL PROB, PROB_RAND
       REAL*8 EE0, EE0_NORM, RFAC
       REAL*8 PTOT, FTOT
@@ -90,6 +90,7 @@ C
       INTEGER NSTU
       REAL, DIMENSION(9) :: RNARRAY
       CHARACTER(LEN=15) A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,A11,A12,A13,A14
+      CHARACTER(LEN=15) A15,A16,A17
 
       REAL LOBAD, DF, DX, DY, ERR, PSFMAG, BRIGHT, XPSF, YPSF
       REAL SEPCRIT, PSFRAD, RADIUS, THRESH, AP1, PHPADU, RONOIS
@@ -957,10 +958,11 @@ C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX
 
       GRIDSIZE = ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))
       ALLOCATE (PPU_MIN(GRIDSIZE),FU(GRIDSIZE),FU_MIN(GRIDSIZE),
-     . SGU(GRIDSIZE),SGL(GRIDSIZE),SGU2(GRIDSIZE),PPU(GRIDSIZE))
+     . SGU(GRIDSIZE),SGL(GRIDSIZE),SGU2(GRIDSIZE),PPU(GRIDSIZE),
+     . EMIN_CHI2(GRIDSIZE),EMINPIX(GRIDSIZE))
 
 C      WRITE(*,*) GRIDSIZE
-      A1 = "X1_CENTER"
+      A1 = "#X1_CENTER"
       A2 = "Y1_CENTER"
       A3 = "X2_CENTER"
       A4 = "Y2_CENTER"
@@ -975,7 +977,12 @@ C      WRITE(*,*) GRIDSIZE
       A12 = "S1-3_SEP"
       A13 = "S1-2_FRATIO"
       A14 = "S1-3_FRATIO"
+      A15 = "F1"
+      A16 = "F2"
+      A17 = "F3"
       OPEN(25,FILE='mcmc_fit.dat',STATUS='UNKNOWN')
+      OPEN(26,FILE='fort.26',STATUS='UNKNOWN')
+      OPEN(27,FILE='chi2_pixel.dat',STATUS='UNKNOWN')
 
       IX10_IN = 0.0
       IY10_IN = 0.0
@@ -1026,7 +1033,7 @@ C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR
       DO IY=IYMIN,IYMAX
         FU(U)=(F )*USEPSF(IPSTYP, IX-X1, IY-Y1, BRIGHT,
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
-        PPU(U) = ABS((DATA(IX,IY) - SKYBAR)) !raw pixel value - sky
+        PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
         U = U + 1
          ENDDO
          ENDDO
@@ -1097,7 +1104,7 @@ C--------------------------------------------------------------
            DO IY=IYMIN,IYMAX
               FU(U)=(F )*USEPSF(IPSTYP, IX-X1, IY-Y1, BRIGHT,
      .        PAR,PSF,NPSF,NPAR,NEXP,NFRAC,DELTAX,DELTAY,DVDXC,DVDYC)
-              PPU(U) = ABS((DATA(IX,IY) - SKYBAR)) !raw pixel value - sky
+              PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
               U = U + 1
               ENDDO
               ENDDO
@@ -1192,7 +1199,8 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IX20_IN,IY20_IN
       WRITE(*,*) "Star 1 Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
-      WRITE(25,*) A1,A2,A3,A4,A5,A6,A7,A8       
+      WRITE(25,*) A1,A2,A3,A4,A5,A6,A7,A8
+      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR,PSFMAG
 
       IX10 = IX10_IN !initial source x
       IY10 = IY10_IN !initial source y
@@ -1212,8 +1220,9 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
      .  + (1-F)*USEPSF(IPSTYP, IX-X2, IY-Y2, BRIGHT,
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
-        PPU(U) = ABS((DATA(IX,IY) - SKYBAR)) !raw pixel value - sky
+        PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
         U = U + 1
+C        WRITE(26,*) IX,IY,DATA(IX,IY)
          ENDDO
          ENDDO
         PTOT = 0
@@ -1243,7 +1252,7 @@ C---------Simple Pixel Noise Model----------------------------
           SGU2(U)=SQRT(16.0+MAX(DATA(IX,IY),0.)
      .    +(0.01*MAX(DATA(IX,IY),0.))**2)
 C-------------------------------------------------------------
-        EE0=EE0+(((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*Z0)/SGU2(U))**2)/RFAC
+        EE0=EE0+((((DATA(IX,IY)-SKYBAR)-FU(U)*Z0)/SGU2(U))**2)/RFAC
          U = U + 1
          ENDDO
          ENDDO
@@ -1255,7 +1264,7 @@ C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
           FU_MIN(U) = FU(U)
-          PPU_MIN(U) = ABS((DATA(IX,IY)-SKYBAR))
+          PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
             U = U + 1
             ENDDO
             ENDDO
@@ -1267,7 +1276,8 @@ C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
          EMIN = EE0
          ZMIN = Z0
       WRITE (25,*) X1MIN, Y1MIN, X2MIN, Y2MIN,
-     . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2), FMIN, ZMIN, EMIN
+     . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2), FMIN, ZMIN, 
+     . (FMIN*ZMIN), ((1-FMIN)*(ZMIN)), EMIN
 C--------------------------------------------------------------
       DO IT = 1, Steps
       CALL RANDOM_NUMBER(RNARRAY)
@@ -1295,8 +1305,9 @@ C--------------------------------------------------------------
      .        PAR,PSF,NPSF,NPAR,NEXP,NFRAC,DELTAX,DELTAY,DVDXC,DVDYC)
      .        + (1-F)*USEPSF(IPSTYP, IX-X2, IY-Y2, BRIGHT,
      .        PAR,PSF,NPSF,NPAR,NEXP,NFRAC,DELTAX,DELTAY,DVDXC,DVDYC)
-              PPU(U) = ABS((DATA(IX,IY) - SKYBAR)) !raw pixel value - sky
+              PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
               U = U + 1
+C              WRITE(*,*) DATA(IX,IY)
               ENDDO
               ENDDO
            PTOT = 0.
@@ -1311,15 +1322,19 @@ C--------------------------------------------------------------
               ENDDO
            U = 1
            ZM = (PTOT/FTOT) !zm=modified total flux
+C           WRITE(*,*) PTOT,FTOT,ZM
+C           WRITE(*,*) ((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM))
            EEM = 0.0D0
            DO IX=IXMIN,IXMAX
            DO IY=IYMIN,IYMAX
-             EEM_CHI2=((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*ZM)/SGU2(U))**2
-              EEM=EEM+((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*ZM)/SGU2(U))**2
+             EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
+              EEM=EEM+(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
                U = U + 1
-C               WRITE(*,*) EEM
+C           WRITE(*,*) IX, IY, EEM_CHI2
            ENDDO
            ENDDO
+C           WRITE(26,*) IX,IY,EMIN_CHI2(U)
+C           WRITE(*,*) EEM_CHI2,EMIN
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2) 
 C      SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
 C        EEM = EEM + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
@@ -1331,16 +1346,19 @@ C         WRITE(*,*) EEM,EMIN,EE0
               X2MIN = X2
               Y2MIN = Y2
               FMIN = IFM * 0.001
-              EMIN = EEM
               ZMIN = ZM
-         U = 1                 
+              EMIN = EEM
+         U = 1
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
-        PPU_MIN(U) = ABS((DATA(IX,IY)-SKYBAR))
+        PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
+        EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
          U = U + 1
+C         WRITE(26,*) IX, IY, EEM_CHI2, DATA(IX,IY)
           ENDDO
           ENDDO
+C         CLOSE(26)
         ELSE
         ENDIF
       IF (EEM .LE. EE0) THEN
@@ -1352,12 +1370,13 @@ C         WRITE(*,*) EEM,EMIN,EE0
         Z0 = ZM
         EE0 = EEM
         SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
-        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,EEM
+        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,((IFM*.001)*(ZM)),
+     .  ((1-IFM*.001)*(ZM)),EEM
          U = 1
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
          FU_MIN(U) = FU(U)
-         PPU_MIN(U) = ABS((DATA(IX,IY)-SKYBAR))
+         PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
          U = U + 1
           ENDDO
           ENDDO
@@ -1373,17 +1392,20 @@ C         WRITE(*,*) EEM,EMIN,EE0
         Z0 = ZM
         EE0 = EEM
         SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2)
-        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,EEM
+        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,((IFM*.001)*(ZM)),
+     .  ((1-IFM*.001)*(ZM)),EEM
         ENDIF
       ENDIF
       IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
       ENDDO !End main MCMC iteration
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2              SEP            F_RATIO          F_TOTAL
-     .    CHI2"
+     .       F1              F2              CHI2"
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,
      .            9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
-     .            FMIN,ZMIN,EMIN
+     .            FMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),EMIN
+C      WRITE(*,*) X1MIN,Y1MIN,FMIN,ZMIN,EMIN,EEM_CHI2
+C      WRITE(26,*) EMINPIX(2)
        GO TO 9000
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
 C==============================================================
@@ -1406,7 +1428,8 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IF0_IN
       WRITE(*,*) "Star 3 (faintest) Flux Contribution (0 - 1):"
       READ(*,*) IFB0_IN
-C      WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A8
+      WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A8
+      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR,PSFMAG
 
       IX10 = IX10_IN !initial source x
       IY10 = IY10_IN !initial source y
@@ -1440,7 +1463,7 @@ C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
      .  + (FB )*USEPSF(IPSTYP, IX-X3, IY-Y3, BRIGHT,
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
-        PPU(U) = ABS((DATA(IX,IY) - SKYBAR)) !raw pixel value - sky
+        PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
         U = U + 1
 C        WRITE(*,*) IX,IY,DATA(IX,IY),FU(U)
          ENDDO
@@ -1500,7 +1523,7 @@ C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
       WRITE (25,*) X1MIN, Y1MIN, X2MIN, Y2MIN, X3MIN, Y3MIN,
      . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
      . 9.942*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2), FMIN, FBMIN,
-     . ZMIN, EMIN
+     . ZMIN, (FMIN*ZMIN), ((1-FMIN)*(ZMIN)), (FBMIN*ZMIN), EMIN
 C--------------------------------------------------------------
       DO IT = 1, Steps
       CALL RANDOM_NUMBER(RNARRAY)
@@ -1536,7 +1559,7 @@ C--------------------------------------------------------------
      .        PAR,PSF,NPSF,NPAR,NEXP,NFRAC,DELTAX,DELTAY,DVDXC,DVDYC)
      .        + (FB )*USEPSF(IPSTYP, IX-X3, IY-Y3, BRIGHT,
      .        PAR,PSF,NPSF,NPAR,NEXP,NFRAC,DELTAX,DELTAY,DVDXC,DVDYC)
-              PPU(U) = ABS((DATA(IX,IY) - SKYBAR)) !raw pixel value - sky
+              PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
               U = U + 1
               ENDDO
               ENDDO
@@ -1600,7 +1623,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
         LSSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
         BSEP = 9.942*SQRT((X1-X3)**2+(Y1-Y3)**2) !9.942 = NIRC2 pix scale
         WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
-     .        ZM,EEM
+     .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
          U = 1
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
@@ -1626,7 +1649,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
         LSSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2)
         BSEP = 9.942*SQRT((X1-X3)**2+(Y1-Y3)**2) !9.942 = NIRC2 pix scale
         WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
-     .        ZM,EEM
+     .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
       ENDIF
       ENDIF
       IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
@@ -1638,7 +1661,8 @@ C         WRITE(*,*) EEM,EMIN,EE0
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
      . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
      . 9.942*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2),
-     .       FMIN,FBMIN,ZMIN,EMIN
+     .       FMIN,FBMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),
+     .       (FBMIN*ZMIN),EMIN
 C------------------------------------
 C----------END OF MCMC-------------------------------------------------
 C------------------------------------
