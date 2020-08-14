@@ -981,7 +981,6 @@ C      WRITE(*,*) GRIDSIZE
       A16 = "F2"
       A17 = "F3"
       OPEN(25,FILE='mcmc_fit.dat',STATUS='UNKNOWN')
-      OPEN(26,FILE='chi2_pixel.dat',STATUS='UNKNOWN')
 
       IX10_IN = 0.0
       IY10_IN = 0.0
@@ -1063,7 +1062,7 @@ C---------Simple Pixel Noise Model----------------------------
           SGU2(U)=SQRT(16.0+MAX(DATA(IX,IY),0.)
      .    +(0.01*MAX(DATA(IX,IY),0.))**2)
 C-------------------------------------------------------------
-        EE0=EE0+(((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*Z0)/SGU2(U))**2)/RFAC
+        EE0=EE0+((((DATA(IX,IY)-SKYBAR)-FU(U)*Z0)/SGU2(U))**2)/RFAC
          U = U + 1
          ENDDO
          ENDDO
@@ -1072,7 +1071,7 @@ C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
           FU_MIN(U) = FU(U)
-          PPU_MIN(U) = ABS((DATA(IX,IY)-SKYBAR))
+          PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
             U = U + 1
             ENDDO
             ENDDO
@@ -1122,8 +1121,8 @@ C--------------------------------------------------------------
            EEM = 0.0D0
            DO IX=IXMIN,IXMAX
            DO IY=IYMIN,IYMAX
-             EEM_CHI2=((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*ZM)/SGU2(U))**2
-              EEM=EEM+((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*ZM)/SGU2(U))**2
+             EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
+              EEM=EEM+(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
                U = U + 1
 C               WRITE(*,*) EEM
            ENDDO
@@ -1140,7 +1139,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
-        PPU_MIN(U) = ABS((DATA(IX,IY)-SKYBAR))
+        PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
          U = U + 1
           ENDDO
           ENDDO
@@ -1157,7 +1156,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
          FU_MIN(U) = FU(U)
-         PPU_MIN(U) = ABS((DATA(IX,IY)-SKYBAR))
+         PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
          U = U + 1
           ENDDO
           ENDDO
@@ -1256,8 +1255,8 @@ C-------------------------------------------------------------
          ENDDO
          ENDDO
 C         EE0 = EE0 + EXP(((FU(U)*Z0-6284)/231.565)**2) 
-      SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
-        EE0 = EE0 + EXP(((SSEP-60.1)/(4.43))**2)!SSEP Constraint Here
+C      SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
+C        EE0 = EE0 + EXP(((SSEP-60.1)/(4.43))**2)!SSEP Constraint Here
 C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
         U = 1 
         DO IX=IXMIN,IXMAX
@@ -1335,8 +1334,8 @@ C           WRITE(*,*) IX, IY, EEM_CHI2
 C           WRITE(26,*) IX,IY,EMIN_CHI2(U)
 C           WRITE(*,*) EEM_CHI2,EMIN
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2) 
-      SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
-        EEM = EEM + EXP(((SSEP-60.1)/(4.43))**2)!SSEP Constraint Here
+C      SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
+C        EEM = EEM + EXP(((SSEP-60.1)/(4.43))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
 C         WRITE(*,*) EEM,EMIN,EE0
         IF (EEM .LT. EMIN) THEN
@@ -1348,6 +1347,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
               ZMIN = ZM
               EMIN = EEM
          U = 1
+      OPEN(26,FILE='chi2_pixel.dat',STATUS='UNKNOWN')
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
@@ -1494,7 +1494,7 @@ C---------Simple Pixel Noise Model----------------------------
           SGU2(U)=SQRT(16.0+MAX(DATA(IX,IY),0.)
      .    +(0.01*MAX(DATA(IX,IY),0.))**2)
 C-------------------------------------------------------------
-        EE0=EE0+(((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*Z0)/SGU2(U))**2)/RFAC
+        EE0=EE0+((((DATA(IX,IY)-SKYBAR)-FU(U)*Z0)/SGU2(U))**2)/RFAC
          U = U + 1
          ENDDO
          ENDDO
@@ -1505,7 +1505,7 @@ C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
           FU_MIN(U) = FU(U)
-          PPU_MIN(U) = ABS((DATA(IX,IY)-SKYBAR))
+          PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
             U = U + 1
             ENDDO
             ENDDO
@@ -1577,8 +1577,8 @@ C--------------------------------------------------------------
            EEM = 0.0D0
            DO IX=IXMIN,IXMAX
            DO IY=IYMIN,IYMAX
-             EEM_CHI2=((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*ZM)/SGU2(U))**2
-              EEM=EEM+((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*ZM)/SGU2(U))**2
+             EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
+              EEM=EEM+(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
 C           EEM=EEM+(((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*ZM)/SGU2(U))**2)/3
                U = U + 1
            ENDDO
@@ -1602,7 +1602,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
-        PPU_MIN(U) = ABS((DATA(IX,IY)-SKYBAR))
+        PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
          U = U + 1
           ENDDO
           ENDDO
@@ -1627,7 +1627,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
          FU_MIN(U) = FU(U)
-         PPU_MIN(U) = ABS((DATA(IX,IY)-SKYBAR))
+         PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
          U = U + 1
           ENDDO
           ENDDO
