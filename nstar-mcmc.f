@@ -953,8 +953,12 @@ C ratio (f), and total flux (z).
 C
 C--------------------
 C===================================================================================
-C      WRITE(*,*) SKYBAR, SKY
-C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX
+C If you ever need to adjust the size of the fitting box, you can uncomment and change
+C the values below this line.
+C      IXMIN = 879
+C      IXMAX = 908
+C      IYMIN = 811
+C      IYMAX = 836
 
       GRIDSIZE = ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))
       ALLOCATE (PPU_MIN(GRIDSIZE),FU(GRIDSIZE),FU_MIN(GRIDSIZE),
@@ -1007,7 +1011,7 @@ C              1-STAR-FIT
 C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
  9500 WRITE(*,"(a,I4.2)") "Degrees of Freedom = ",
-     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+4
+     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+3
       WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
       READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
@@ -1017,7 +1021,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       WRITE(*,*) "Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
       WRITE(25,*) A1,A2,A7,A8
-C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR
+      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR,PSFMAG
 
       IX10 = IX10_IN !initial source x
       IY10 = IY10_IN !initial source y
@@ -1256,7 +1260,7 @@ C-------------------------------------------------------------
          ENDDO
 C         EE0 = EE0 + EXP(((FU(U)*Z0-6284)/231.565)**2) 
 C      SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
-C        EE0 = EE0 + EXP(((SSEP-60.1)/(4.43))**2)!SSEP Constraint Here
+C        EE0 = EE0 + EXP(((SSEP-40.1)/(1.73))**2)!SSEP Constraint Here
 C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
         U = 1 
         DO IX=IXMIN,IXMAX
@@ -1335,7 +1339,7 @@ C           WRITE(26,*) IX,IY,EMIN_CHI2(U)
 C           WRITE(*,*) EEM_CHI2,EMIN
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2) 
 C      SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
-C        EEM = EEM + EXP(((SSEP-60.1)/(4.43))**2)!SSEP Constraint Here
+C        EEM = EEM + EXP(((SSEP-40.1)/(1.73))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
 C         WRITE(*,*) EEM,EMIN,EE0
         IF (EEM .LT. EMIN) THEN
@@ -1403,8 +1407,6 @@ C         WRITE(*,*) EEM,EMIN,EE0
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,
      .            9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
      .            FMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),EMIN
-C      WRITE(*,*) X1MIN,Y1MIN,FMIN,ZMIN,EMIN,EEM_CHI2
-C      WRITE(26,*) EMINPIX(2)
        GO TO 9000
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
 C==============================================================
