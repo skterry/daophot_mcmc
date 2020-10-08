@@ -1201,7 +1201,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IX20_IN,IY20_IN
       WRITE(*,*) "Star 1 Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
-      WRITE(25,*) A1,A2,A3,A4,A5,A6,A7,A8
+      WRITE(25,*) A1,A2,A3,A4,A5,A6,A7,A15,A16,A8
       WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR,PSFMAG
 
       IX10 = IX10_IN !initial source x
@@ -1260,9 +1260,9 @@ C-------------------------------------------------------------
          ENDDO
 C         EE0 = EE0 + EXP(((FU(U)*Z0-6284)/231.565)**2) 
 C      SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
-C        EE0 = EE0 + EXP(((SSEP-40.1)/(1.73))**2)!SSEP Constraint Here
+C        EE0 = EE0 + EXP(((SSEP-33.0)/(3.73))**2)!SSEP Constraint Here
 C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
-        U = 1 
+        U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
           FU_MIN(U) = FU(U)
@@ -1281,6 +1281,7 @@ C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
      . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2), FMIN, ZMIN, 
      . (FMIN*ZMIN), ((1-FMIN)*(ZMIN)), EMIN
 C--------------------------------------------------------------
+C Begin CMCMC LOOP
       DO IT = 1, Steps
       CALL RANDOM_NUMBER(RNARRAY)
       IX1M = IX10 + (200*RNARRAY(1)-100)/500
@@ -1339,7 +1340,7 @@ C           WRITE(26,*) IX,IY,EMIN_CHI2(U)
 C           WRITE(*,*) EEM_CHI2,EMIN
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2) 
 C      SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
-C        EEM = EEM + EXP(((SSEP-40.1)/(1.73))**2)!SSEP Constraint Here
+C        EEM = EEM + EXP(((SSEP-33.0)/(3.73))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
 C         WRITE(*,*) EEM,EMIN,EE0
         IF (EEM .LT. EMIN) THEN
@@ -1658,7 +1659,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2               X3               Y3           1-2SEP         
      .   1-3SEP         F1_RATIO           F2_RATIO           F_TOTAL
-     .     CHI2"
+     .     F1              F2           F3              CHI2"
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
      . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
      . 9.942*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2),
