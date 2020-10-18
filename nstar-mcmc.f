@@ -943,7 +943,7 @@ C      GO TO 2000
  9400 CONTINUE 
 C===================================================================================
 C--------------------
-C             MCMC Version 1.2 - 2020 July 7
+C             MCMC Version 1.3 - 2020 October 17
 C             S. Terry
 C
 C Markov chain Monte Carlo routine to fit blended
@@ -953,7 +953,7 @@ C ratio (f), and total flux (z).
 C
 C--------------------
 C===================================================================================
-C If you ever need to adjust the size of the fitting box, you can uncomment and change
+C If you ever need to manually adjust the size of the fitting box, you can uncomment and change
 C the values below this line.
 C      IXMIN = 879
 C      IXMAX = 908
@@ -1011,7 +1011,7 @@ C              1-STAR-FIT
 C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
  9500 WRITE(*,"(a,I4.2)") "Degrees of Freedom = ",
-     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+3
+     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-3
       WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
       READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
@@ -1086,6 +1086,7 @@ C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
          ZMIN = Z0
       WRITE (25,*) X1MIN, Y1MIN, ZMIN, EMIN
 C--------------------------------------------------------------
+C Begin MCMC LOOP
       DO IT = 1, Steps
       CALL RANDOM_NUMBER(RNARRAY)
       IX1M = IX10 + (200*RNARRAY(1)-100)/300
@@ -1190,7 +1191,7 @@ C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  
  9600 WRITE(*,"(a,I4.2)") "Degrees of Freedom =",
-     .((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+6
+     .((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-6
       WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
       READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
@@ -1260,7 +1261,7 @@ C-------------------------------------------------------------
          ENDDO
 C         EE0 = EE0 + EXP(((FU(U)*Z0-6284)/231.565)**2) 
 C      SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
-C        EE0 = EE0 + EXP(((SSEP-33.0)/(3.73))**2)!SSEP Constraint Here
+C        EE0 = EE0 + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
 C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
         U = 1
         DO IX=IXMIN,IXMAX
@@ -1281,7 +1282,7 @@ C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
      . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2), FMIN, ZMIN, 
      . (FMIN*ZMIN), ((1-FMIN)*(ZMIN)), EMIN
 C--------------------------------------------------------------
-C Begin CMCMC LOOP
+C Begin MCMC LOOP
       DO IT = 1, Steps
       CALL RANDOM_NUMBER(RNARRAY)
       IX1M = IX10 + (200*RNARRAY(1)-100)/500
@@ -1333,16 +1334,12 @@ C           WRITE(*,*) ((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM))
              EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
               EEM=EEM+(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
                U = U + 1
-C           WRITE(*,*) IX, IY, EEM_CHI2
            ENDDO
            ENDDO
-C           WRITE(26,*) IX,IY,EMIN_CHI2(U)
-C           WRITE(*,*) EEM_CHI2,EMIN
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2) 
 C      SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
-C        EEM = EEM + EXP(((SSEP-33.0)/(3.73))**2)!SSEP Constraint Here
+C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
-C         WRITE(*,*) EEM,EMIN,EE0
         IF (EEM .LT. EMIN) THEN
               X1MIN = X1
               Y1MIN = Y1
@@ -1415,7 +1412,7 @@ C              3-STAR-FIT
 C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
  9700 WRITE(*,"(a,I4.2)") "Degrees of Freedom = ",
-     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+9
+     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-9
       WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
       READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
@@ -1527,6 +1524,7 @@ C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
      . 9.942*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2), FMIN, FBMIN,
      . ZMIN, (FMIN*ZMIN), ((1-FMIN)*(ZMIN)), (FBMIN*ZMIN), EMIN
 C--------------------------------------------------------------
+C Begin MCMC LOOP
       DO IT = 1, Steps
       CALL RANDOM_NUMBER(RNARRAY)
       IX1M = IX10 + (200*RNARRAY(1)-100)/1200
