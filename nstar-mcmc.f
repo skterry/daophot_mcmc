@@ -77,7 +77,7 @@ C
       REAL, ALLOCATABLE :: PPU_MIN(:), EMIN_CHI2(:), EMINPIX(:)
       REAL PROB, PROB_RAND
       REAL*8 EE0, EE0_NORM, RFAC
-      REAL*8 PTOT, FTOT
+      REAL*8 PTOT, FTOT, PIXSCALE
       REAL*8 Z0, LSSEP, BSEP
       REAL*8 CHISQ, CHISQ_MIN
       REAL*8 F, F1, F2
@@ -1021,7 +1021,9 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       WRITE(*,*) "Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
       WRITE(25,*) A1,A2,A7,A8
-      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR,PSFMAG
+      WRITE(*,*) "Fit box:", IXMIN,IXMAX,IYMIN,IYMAX
+      WRITE(*,*) "Sky Avg:", SKYBAR
+      WRITE(*,*) "Zeropoint Mag:", PSFMAG
 
       IX10 = IX10_IN !initial source x
       IY10 = IY10_IN !initial source y
@@ -1192,6 +1194,8 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  
  9600 WRITE(*,"(a,I4.2)") "Degrees of Freedom =",
      .((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-6
+      WRITE(*,*) "Pixel Scale (mas/pix):"
+      READ(*,*) PIXSCALE
       WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
       READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
@@ -1203,7 +1207,9 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       WRITE(*,*) "Star 1 Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
       WRITE(25,*) A1,A2,A3,A4,A5,A6,A7,A15,A16,A8
-      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR,PSFMAG
+      WRITE(*,*) "Fit box:", IXMIN,IXMAX,IYMIN,IYMAX
+      WRITE(*,*) "Sky Avg:", SKYBAR
+      WRITE(*,*) "Zeropoint Mag:", PSFMAG
 
       IX10 = IX10_IN !initial source x
       IY10 = IY10_IN !initial source y
@@ -1260,7 +1266,7 @@ C-------------------------------------------------------------
          ENDDO
          ENDDO
 C         EE0 = EE0 + EXP(((FU(U)*Z0-6284)/231.565)**2) 
-C      SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
+C      SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
 C        EE0 = EE0 + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
 C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
         U = 1
@@ -1337,7 +1343,7 @@ C           WRITE(*,*) ((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM))
            ENDDO
            ENDDO
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2) 
-C      SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
+C      SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
 C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
         IF (EEM .LT. EMIN) THEN
@@ -1370,7 +1376,7 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
         IF0 = IFM
         Z0 = ZM
         EE0 = EEM
-        SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
+        SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942=NIRC2/OSIRIS pix scale
         WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,((IFM*.001)*(ZM)),
      .  ((1-IFM*.001)*(ZM)),EEM
          U = 1
@@ -1392,7 +1398,7 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
         IF0 = IFM
         Z0 = ZM
         EE0 = EEM
-        SSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2)
+        SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
         WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,((IFM*.001)*(ZM)),
      .  ((1-IFM*.001)*(ZM)),EEM
         ENDIF
@@ -1400,10 +1406,10 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
       IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
       ENDDO !End main MCMC iteration
        WRITE(*,*) "      X1               Y1               X2        
-     .    Y2              SEP            F_RATIO          F_TOTAL
-     .       F1              F2              CHI2"
+     .    Y2                   SEP                F_RATIO        F_TOTAL
+     .           F1               F2               CHI2"
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,
-     .            9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
+     .            PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
      .            FMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),EMIN
        GO TO 9000
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
@@ -1413,6 +1419,8 @@ C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
  9700 WRITE(*,"(a,I4.2)") "Degrees of Freedom = ",
      . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-9
+      WRITE(*,*) "Pixel Scale (mas/pix):"
+      READ(*,*) PIXSCALE
       WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
       READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
@@ -1428,7 +1436,9 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       WRITE(*,*) "Star 3 (faintest) Flux Contribution (0 - 1):"
       READ(*,*) IFB0_IN
       WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A8
-      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR,PSFMAG
+      WRITE(*,*) "Fit box:", IXMIN,IXMAX,IYMIN,IYMAX
+      WRITE(*,*) "Sky Avg:", SKYBAR
+      WRITE(*,*) "Zeropoint Mag:", PSFMAG
 
       IX10 = IX10_IN !initial source x
       IY10 = IY10_IN !initial source y
@@ -1498,7 +1508,7 @@ C-------------------------------------------------------------
          U = U + 1
          ENDDO
          ENDDO
-C      SSEP = 9.942*SQRT((X1-X3)**2+(Y1-Y3)**2) !9.942 = NIRC2 pix scale
+C      SSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
 C        EE0 = EE0 + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
 C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
         U = 1 
@@ -1520,8 +1530,8 @@ C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
          EMIN = EE0
          ZMIN = Z0
       WRITE (25,*) X1MIN, Y1MIN, X2MIN, Y2MIN, X3MIN, Y3MIN,
-     . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
-     . 9.942*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2), FMIN, FBMIN,
+     . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
+     . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2), FMIN, FBMIN,
      . ZMIN, (FMIN*ZMIN), ((1-FMIN)*(ZMIN)), (FBMIN*ZMIN), EMIN
 C--------------------------------------------------------------
 C Begin MCMC LOOP
@@ -1584,7 +1594,7 @@ C           EEM=EEM+(((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*ZM)/SGU2(U))**2)/3
                U = U + 1
            ENDDO
            ENDDO
-C      SSEP = 9.942*SQRT((X1-X3)**2+(Y1-Y3)**2) !9.942 = NIRC2 pix scale
+C      SSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
 C        EE0 = EE0 + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
 C         WRITE(*,*) EEM,EMIN,EE0
@@ -1620,8 +1630,8 @@ C         WRITE(*,*) EEM,EMIN,EE0
         IFB0 = IFBM
         Z0 = ZM
         EE0 = EEM
-        LSSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
-        BSEP = 9.942*SQRT((X1-X3)**2+(Y1-Y3)**2) !9.942 = NIRC2 pix scale
+        LSSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
+        BSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2) !9.942 = NIRC2 pix scale
         WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
      .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
          U = 1
@@ -1646,8 +1656,8 @@ C         WRITE(*,*) EEM,EMIN,EE0
         IFB0 = IFBM
         Z0 = ZM
         EE0 = EEM
-        LSSEP = 9.942*SQRT((X1-X2)**2+(Y1-Y2)**2)
-        BSEP = 9.942*SQRT((X1-X3)**2+(Y1-Y3)**2) !9.942 = NIRC2 pix scale
+        LSSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
+        BSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2) !9.942 = NIRC2 pix scale
         WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
      .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
       ENDIF
@@ -1659,8 +1669,8 @@ C         WRITE(*,*) EEM,EMIN,EE0
      .   1-3SEP         F1_RATIO           F2_RATIO           F_TOTAL
      .     F1              F2           F3              CHI2"
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
-     . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
-     . 9.942*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2),
+     . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
+     . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2),
      .       FMIN,FBMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),
      .       (FBMIN*ZMIN),EMIN
 C------------------------------------
