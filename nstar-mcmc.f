@@ -943,17 +943,17 @@ C      GO TO 2000
  9400 CONTINUE 
 C===================================================================================
 C--------------------
-C             MCMC Version 1.3 - 2020 October 17
+C             MCMC Version 1.3 - 2020 October 21
 C             S. Terry
 C
 C Markov chain Monte Carlo routine to fit blended
 C targets (two or three). Parameters that are 
-C currently fitted are star centroids (x,y), flux
+C currently fitted are star centroids (x_i,y_i), flux
 C ratio (f), and total flux (z).
 C
 C--------------------
 C===================================================================================
-C If you ever need to manually adjust the size of the fitting box, you can uncomment and change
+C In order to manually adjust the size of the fitting box, uncomment and change
 C the values below this line.
 C      IXMIN = 879
 C      IXMAX = 908
@@ -965,7 +965,6 @@ C      IYMAX = 836
      . SGU(GRIDSIZE),SGL(GRIDSIZE),SGU2(GRIDSIZE),PPU(GRIDSIZE),
      . EMIN_CHI2(GRIDSIZE),EMINPIX(GRIDSIZE))
 
-C      WRITE(*,*) GRIDSIZE
       A1 = "#X1_CENTER"
       A2 = "Y1_CENTER"
       A3 = "X2_CENTER"
@@ -1049,7 +1048,6 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
          PTOT = PTOT + PPU(U)
          FTOT = FTOT + FU(U)
          U = U + 1
-C         WRITE(*,*) IX,IY,PTOT,FTOT, (PTOT/FTOT)
          ENDDO
          ENDDO
            Z0 = (PTOT/FTOT)
@@ -1072,7 +1070,6 @@ C-------------------------------------------------------------
          U = U + 1
          ENDDO
          ENDDO
-C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
         U = 1 
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
@@ -1124,32 +1121,34 @@ C--------------------------------------------------------------
               ENDDO
               ENDDO
            U = 1
-           ZM = (PTOT/FTOT) !zm=modified total flux
+           ZM = (PTOT/FTOT)
            EEM = 0.0D0
            DO IX=IXMIN,IXMAX
            DO IY=IYMIN,IYMAX
              EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
               EEM=EEM+(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
                U = U + 1
-C               WRITE(*,*) EEM
            ENDDO
            ENDDO
          EEM = EEM/RFAC
-C         WRITE(*,*) EEM,EMIN,EE0
         IF (EEM .LT. EMIN) THEN
               X1MIN = X1
               Y1MIN = Y1
               FMIN = IFM * 0.001
               EMIN = EEM
               ZMIN = ZM
-         U = 1                 
+         U = 1
+      OPEN(26,FILE='chisq_pixel.dat',STATUS='UNKNOWN')
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
         PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
+        EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
          U = U + 1
+         WRITE(26,*) IX, IY, EEM_CHI2, DATA(IX,IY)
           ENDDO
           ENDDO
+         CLOSE(26)
         ELSE
         ENDIF
       IF (EEM .LE. EE0) THEN
@@ -1231,7 +1230,6 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
         PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
         U = U + 1
-C        WRITE(26,*) IX,IY,DATA(IX,IY)
          ENDDO
          ENDDO
         PTOT = 0
@@ -1242,7 +1240,6 @@ C        WRITE(26,*) IX,IY,DATA(IX,IY)
          PTOT = PTOT + PPU(U)
          FTOT = FTOT + FU(U)
          U = U + 1
-C         WRITE(*,*) IX,IY,PTOT,FTOT, (PTOT/FTOT)
          ENDDO
          ENDDO
            Z0 = (PTOT/FTOT)
@@ -1268,7 +1265,6 @@ C-------------------------------------------------------------
 C         EE0 = EE0 + EXP(((FU(U)*Z0-6284)/231.565)**2) 
 C      SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
 C        EE0 = EE0 + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
-C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
@@ -1317,7 +1313,6 @@ C--------------------------------------------------------------
      .        PAR,PSF,NPSF,NPAR,NEXP,NFRAC,DELTAX,DELTAY,DVDXC,DVDYC)
               PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
               U = U + 1
-C              WRITE(*,*) DATA(IX,IY)
               ENDDO
               ENDDO
            PTOT = 0.
@@ -1331,9 +1326,7 @@ C              WRITE(*,*) DATA(IX,IY)
               ENDDO
               ENDDO
            U = 1
-           ZM = (PTOT/FTOT) !zm=modified total flux
-C           WRITE(*,*) PTOT,FTOT,ZM
-C           WRITE(*,*) ((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM))
+           ZM = (PTOT/FTOT)
            EEM = 0.0D0
            DO IX=IXMIN,IXMAX
            DO IY=IYMIN,IYMAX
@@ -1343,7 +1336,7 @@ C           WRITE(*,*) ((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM))
            ENDDO
            ENDDO
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2) 
-C      SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
+C      SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
 C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
         IF (EEM .LT. EMIN) THEN
@@ -1355,7 +1348,7 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
               ZMIN = ZM
               EMIN = EEM
          U = 1
-      OPEN(26,FILE='chi2_pixel.dat',STATUS='UNKNOWN')
+      OPEN(26,FILE='chisq_pixel.dat',STATUS='UNKNOWN')
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
@@ -1376,7 +1369,7 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
         IF0 = IFM
         Z0 = ZM
         EE0 = EEM
-        SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942=NIRC2/OSIRIS pix scale
+        SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
         WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,((IFM*.001)*(ZM)),
      .  ((1-IFM*.001)*(ZM)),EEM
          U = 1
@@ -1450,12 +1443,6 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       IFB0 = 1000*IFB0_IN !initial flux ratio
       U = 1
 
-C      IXMIN = 665
-C      IXMAX = 710
-C      IYMIN = 365
-C      IYMAX = 410
-C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR
-
         X1 = 1.0*IX10
         Y1 = 1.0*IY10
         X2 = 1.0*IX20
@@ -1474,7 +1461,6 @@ C      WRITE(*,*) IXMIN,IXMAX,IYMIN,IYMAX,SKYBAR
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
         PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
         U = U + 1
-C        WRITE(*,*) IX,IY,DATA(IX,IY),FU(U)
          ENDDO
          ENDDO
         PTOT = 0
@@ -1485,7 +1471,6 @@ C        WRITE(*,*) IX,IY,DATA(IX,IY),FU(U)
          PTOT = PTOT + PPU(U)
          FTOT = FTOT + FU(U)
          U = U + 1
-C         WRITE(*,*) IX,IY,PTOT,FTOT, (PTOT/FTOT)
          ENDDO
          ENDDO
            Z0 = (PTOT/FTOT)
@@ -1508,9 +1493,9 @@ C-------------------------------------------------------------
          U = U + 1
          ENDDO
          ENDDO
+C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2) 
 C      SSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
 C        EE0 = EE0 + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
-C         WRITE(*,*) X1,Y1,X2,Y2,F,Z0,EE0
         U = 1 
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
@@ -1584,20 +1569,19 @@ C--------------------------------------------------------------
               ENDDO
               ENDDO
            U = 1
-           ZM = (PTOT/FTOT) !zm=modified total flux
+           ZM = (PTOT/FTOT)
            EEM = 0.0D0
            DO IX=IXMIN,IXMAX
            DO IY=IYMIN,IYMAX
              EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
               EEM=EEM+(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
-C           EEM=EEM+(((ABS((DATA(IX,IY)-SKYBAR))-FU(U)*ZM)/SGU2(U))**2)/3
                U = U + 1
            ENDDO
            ENDDO
+C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2) 
 C      SSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
 C        EE0 = EE0 + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
-C         WRITE(*,*) EEM,EMIN,EE0
         IF (EEM .LT. EMIN) THEN
               X1MIN = X1
               Y1MIN = Y1
@@ -1610,13 +1594,17 @@ C         WRITE(*,*) EEM,EMIN,EE0
               EMIN = EEM
               ZMIN = ZM
          U = 1                 
+      OPEN(26,FILE='chisq_pixel.dat',STATUS='UNKNOWN')
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
         PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
+        EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
          U = U + 1
+         WRITE(26,*) IX, IY, EEM_CHI2, DATA(IX,IY)
           ENDDO
           ENDDO
+         CLOSE(26)
         ELSE
         ENDIF
       IF (EEM .LE. EE0) THEN
@@ -1630,8 +1618,8 @@ C         WRITE(*,*) EEM,EMIN,EE0
         IFB0 = IFBM
         Z0 = ZM
         EE0 = EEM
-        LSSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2) !9.942 = NIRC2 pix scale
-        BSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2) !9.942 = NIRC2 pix scale
+        LSSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
+        BSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
         WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
      .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
          U = 1
@@ -1657,7 +1645,7 @@ C         WRITE(*,*) EEM,EMIN,EE0
         Z0 = ZM
         EE0 = EEM
         LSSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
-        BSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2) !9.942 = NIRC2 pix scale
+        BSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
         WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
      .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
       ENDIF
