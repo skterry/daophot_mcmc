@@ -11,4 +11,4 @@ Some of the DAOPHOT-MCMC functionality includes:
 * Constraints for best-fit total flux and separation(s).
 * Best-fit ![equation](https://latex.codecogs.com/gif.latex?%5Cchi%5E2)/pixel map to measure PSF stability.
 
-The User Manual for DAOPHOT-MCMC can be found [here](https://github.com/skterry/DAOPHOT-MCMC/blob/master/User_Manual.pdf).
+More detailed information can be found in the DAOPHOT-MCMC User's Manual [here](https://github.com/skterry/DAOPHOT-MCMC/blob/master/User_Manual.pdf).
