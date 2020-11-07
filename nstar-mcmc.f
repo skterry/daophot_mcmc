@@ -942,7 +942,7 @@ C
 C      GO TO 2000
  9400 CONTINUE 
 C===================================================================================
-C-----------------------
+C--------------------
 C             MCMC Version 1.3 - 2020 October 21
 C             S. Terry
 C
@@ -951,7 +951,7 @@ C targets (two or three). Parameters that are
 C currently fitted are star centroids (x_i,y_i), flux
 C ratio (f), and total flux (z).
 C
-C-----------------------
+C--------------------
 C===================================================================================
 C In order to manually adjust the size of the fitting box, uncomment and change
 C the values below this line.
