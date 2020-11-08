@@ -12,7 +12,7 @@ plt.rcParams.update({'font.size': 110})
 plt.rcParams["font.family"]="courier new"
 
 colname = ['Separation', 'Flux_Ratio']
-fname = 'new-mcmc_fit.dat'
+fname = 'mcmc_fit.dat'
 chains1 = pd.read_table(fname, usecols=[0,1], sep='\s+', skiprows=1, names=colname)
 chains2 = pd.read_table(fname, usecols=[2,3], sep='\s+', skiprows=1, names=colname)
 chains3 = pd.read_table(fname, usecols=[4,5], sep='\s+', skiprows=1, names=colname)
