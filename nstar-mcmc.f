@@ -90,7 +90,7 @@ C
       INTEGER NSTU
       REAL, DIMENSION(9) :: RNARRAY
       CHARACTER(LEN=15) A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,A11,A12,A13,A14
-      CHARACTER(LEN=15) A15,A16,A17
+      CHARACTER(LEN=15) A15,A16,A17,A18,A19,A20,A21,A22,A23,A24
 
       REAL LOBAD, DF, DX, DY, ERR, PSFMAG, BRIGHT, XPSF, YPSF
       REAL SEPCRIT, PSFRAD, RADIUS, THRESH, AP1, PHPADU, RONOIS
@@ -972,7 +972,7 @@ C      IYMAX = 836
       A5 = "SEPARATION"
       A6 = "FRATIO"
       A7 = "FTOTAL"
-      A8 = "CHI2"
+      A8 = "CHISQ"
 
       A9 = "X3_CENTER"
       A10 = "Y3_CENTER"
@@ -983,6 +983,11 @@ C      IYMAX = 836
       A15 = "F1"
       A16 = "F2"
       A17 = "F3"
+
+      A18 = "#X"
+      A19 = "Y"
+      A20 = "CHISQ"
+      A21 = "INTENSITY"
       OPEN(25,FILE='mcmc_fit.dat',STATUS='UNKNOWN')
 
       IX10_IN = 0.0
@@ -1020,6 +1025,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       WRITE(*,*) "Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
       WRITE(25,*) A1,A2,A7,A8
+      WRITE(26,*) A18,A19,A20,A21
       WRITE(*,*) "Fit box:", IXMIN,IXMAX,IYMIN,IYMAX
       WRITE(*,*) "Sky Avg:", SKYBAR
       WRITE(*,*) "Zeropoint Mag:", PSFMAG
@@ -1088,9 +1094,9 @@ C--------------------------------------------------------------
 C Begin MCMC LOOP
       DO IT = 1, Steps
       CALL RANDOM_NUMBER(RNARRAY)
-      IX1M = IX10 + (200*RNARRAY(1)-100)/300
-      IY1M = IY10 + (200*RNARRAY(2)-100)/300
-22      IFM = IF0 + (200*RNARRAY(5)-100)/8
+      IX1M = IX10 + (200*RNARRAY(1)-100)/1300
+      IY1M = IY10 + (200*RNARRAY(2)-100)/1300
+22      IFM = IF0 + (200*RNARRAY(5)-100)/12
 
 C      IF ((IFM .GE. 1000) .OR. (IFM .LE. 0)) THEN
 C       GO TO 22
@@ -1206,6 +1212,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       WRITE(*,*) "Star 1 Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
       WRITE(25,*) A1,A2,A3,A4,A5,A6,A7,A15,A16,A8
+      WRITE(26,*) A18,A19,A20,A21
       WRITE(*,*) "Fit box:", IXMIN,IXMAX,IYMIN,IYMAX
       WRITE(*,*) "Sky Avg:", SKYBAR
       WRITE(*,*) "Zeropoint Mag:", PSFMAG
@@ -1287,11 +1294,11 @@ C--------------------------------------------------------------
 C Begin MCMC LOOP
       DO IT = 1, Steps
       CALL RANDOM_NUMBER(RNARRAY)
-      IX1M = IX10 + (200*RNARRAY(1)-100)/500
-      IY1M = IY10 + (200*RNARRAY(2)-100)/500
-      IX2M = IX20 + (200*RNARRAY(3)-100)/500
-13      IY2M = IY20 + (200*RNARRAY(4)-100)/500
-12      IFM = IF0 + (200*RNARRAY(5)-100)/8
+      IX1M = IX10 + (200*RNARRAY(1)-100)/1500
+      IY1M = IY10 + (200*RNARRAY(2)-100)/1500
+      IX2M = IX20 + (200*RNARRAY(3)-100)/1500
+13      IY2M = IY20 + (200*RNARRAY(4)-100)/1500
+12      IFM = IF0 + (200*RNARRAY(5)-100)/12
 
 C      IF ((IFM .GE. 1000) .OR. (IFM .LE. 0)) THEN
 C       GO TO 12
@@ -1429,6 +1436,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       WRITE(*,*) "Star 3 (faintest) Flux Contribution (0 - 1):"
       READ(*,*) IFB0_IN
       WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A8
+      WRITE(26,*) A18,A19,A20,A21
       WRITE(*,*) "Fit box:", IXMIN,IXMAX,IYMIN,IYMAX
       WRITE(*,*) "Sky Avg:", SKYBAR
       WRITE(*,*) "Zeropoint Mag:", PSFMAG
@@ -1522,12 +1530,12 @@ C--------------------------------------------------------------
 C Begin MCMC LOOP
       DO IT = 1, Steps
       CALL RANDOM_NUMBER(RNARRAY)
-      IX1M = IX10 + (200*RNARRAY(1)-100)/1200
-      IY1M = IY10 + (200*RNARRAY(2)-100)/1200
-      IX2M = IX20 + (200*RNARRAY(3)-100)/1200
-      IY2M = IY20 + (200*RNARRAY(4)-100)/1200
-      IX3M = IX30 + (200*RNARRAY(5)-100)/1200
-03      IY3M = IY30 + (200*RNARRAY(6)-100)/1200
+      IX1M = IX10 + (200*RNARRAY(1)-100)/800
+      IY1M = IY10 + (200*RNARRAY(2)-100)/800
+      IX2M = IX20 + (200*RNARRAY(3)-100)/800
+      IY2M = IY20 + (200*RNARRAY(4)-100)/800
+      IX3M = IX30 + (200*RNARRAY(5)-100)/800
+03      IY3M = IY30 + (200*RNARRAY(6)-100)/800
 02      IFM = IF0 + (200*RNARRAY(7)-100)/10
 01      IFBM = IFB0 + (200*RNARRAY(8)-100)/10
 
