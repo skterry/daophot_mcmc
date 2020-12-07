@@ -7,8 +7,10 @@ DAOPHOT-MCMC is a modified version of the subroutine NSTAR.F which implements a 
 Some of the DAOPHOT-MCMC functionality includes:
 
 * Simultaneous 1-star, 2-star, and 3-star PSF fitting.
-* Metropolis-Hastings routine to get posterior probability distributions for positions, separations, flux ratios, and total flux.
+* Metropolis-Hastings routine to calculate posterior probability distributions for positions, separations, flux ratios, and total flux.
 * Constraints for best-fit total flux and separation(s).
 * Best-fit ![equation](https://latex.codecogs.com/gif.latex?%5Cchi%5E2)/pixel map to measure PSF stability.
 
-More detailed information can be found in the DAOPHOT-MCMC User's Manual [here](https://github.com/skterry/DAOPHOT-MCMC/blob/master/User_Manual.pdf).
+Detailed information can be found in the DAOPHOT-MCMC User's Manual [here](https://github.com/skterry/DAOPHOT-MCMC/blob/master/User_Manual.pdf).
+
+If you find this code useful in your research, please cite [Terry et al. 2020](https://arxiv.org/abs/2009.08461)
