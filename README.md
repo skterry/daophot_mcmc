@@ -13,4 +13,4 @@ Some of the DAOPHOT-MCMC functionality includes:
 
 Detailed information can be found in the DAOPHOT-MCMC User's Manual [here](https://github.com/skterry/DAOPHOT-MCMC/blob/master/User_Manual.pdf).
 
-If you find this code useful in your research, please cite [Terry et al. 2020](https://iopscience.iop.org/article/10.3847/1538-3881/abcc60)
+If you find this code useful in your research, please cite [Terry et al. 2021](https://iopscience.iop.org/article/10.3847/1538-3881/abcc60)
