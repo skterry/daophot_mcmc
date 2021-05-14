@@ -1269,7 +1269,7 @@ C-------------------------------------------------------------
          U = U + 1
          ENDDO
          ENDDO
-C         EE0 = EE0 + EXP(((FU(U)*Z0-6284)/231.565)**2) 
+C         EE0 = EE0 + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
 C      SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
 C        EE0 = EE0 + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
         U = 1
@@ -1342,7 +1342,7 @@ C--------------------------------------------------------------
                U = U + 1
            ENDDO
            ENDDO
-C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2) 
+C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
 C      SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
 C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
@@ -1501,7 +1501,7 @@ C-------------------------------------------------------------
          U = U + 1
          ENDDO
          ENDDO
-C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2) 
+C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
 C      SSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
 C        EE0 = EE0 + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
         U = 1 
@@ -1586,7 +1586,7 @@ C--------------------------------------------------------------
                U = U + 1
            ENDDO
            ENDDO
-C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2) 
+C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
 C      SSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
 C        EE0 = EE0 + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
