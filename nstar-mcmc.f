@@ -1403,7 +1403,7 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
      .  ((1-IFM*.001)*(ZM)),EEM
         ENDIF
       ENDIF
-      IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
+      IF (MOD(IT,50000)==0) WRITE(*,"(I8.2)") IT
       ENDDO !End main MCMC iteration
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2                   SEP                F_RATIO        F_TOTAL
