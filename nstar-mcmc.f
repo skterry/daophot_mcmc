@@ -59,7 +59,7 @@ C
 C
       CHARACTER LINE*80
       CHARACTER COOFIL*40, MAGFIL*40, PSFFIL*40, FITFIL*40, GRPFIL*40, 
-     .     SWITCH*40, EXTEND*40
+     .     MCMCFIL*80, CHISQPIXFIL*80, BESTFIL*80, SWITCH*40, EXTEND*40
       CHARACTER CASE*4
 
 
@@ -88,6 +88,7 @@ C
       INTEGER U, US, Counter
       INTEGER NIMU, NIT
       INTEGER NSTU
+      INTEGER PPOS
       REAL, DIMENSION(9) :: RNARRAY
       CHARACTER(LEN=15) A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,A11,A12,A13,A14
       CHARACTER(LEN=15) A15,A16,A17,A18,A19,A20,A21,A22,A23,A24
@@ -104,7 +105,8 @@ C
       INTEGER NITER, NTERM, IER, IDUM, IXMIN, IXMAX, IYMIN, IYMAX
       INTEGER MAXUNK
       LOGICAL OMIT, REDO, CLIP
-      COMMON /FILNAM/ COOFIL, MAGFIL, PSFFIL, FITFIL, GRPFIL
+      COMMON /FILNAM/ COOFIL, MAGFIL, PSFFIL, FITFIL, GRPFIL, MCMCFIL
+      COMMON /FILNAM/ CHISQPIXFIL, BESTFIL
 
 C
 C-----------------------------------------------------------------------
@@ -178,7 +180,7 @@ C
 C Inquire the name of the output file, and open it.
 C
       FITFIL=SWITCH(GRPFIL, CASE('.nst'))
-  980 CALL GETNAM ('File for results:', FITFIL)
+  980 CALL GETNAM ('File for NSTAR results:', FITFIL)
       IF ((FITFIL .EQ. 'END-OF-FILE') .OR.
      .     (FITFIL .EQ. 'GIVE UP')) THEN
          CALL CLFILE (2)
@@ -193,6 +195,61 @@ C
          GO TO 980
       END IF
 C
+C
+C Inquire the name of the MCMC output file, and open it.
+C      MCMCFIL=SWITCH(GRPFIL, CASE('.mc'))
+   25 CALL GETNAM ('File for MCMC results:', MCMCFIL)
+      IF ((MCMCFIL .EQ. 'END-OF-FILE') .OR.
+     .     (MCMCFIL .EQ. 'GIVE UP')) THEN
+         CALL CLFILE (3)
+         MCMCFIL = ' '
+         RETURN
+      END IF
+C     
+C      CALL OUTFIL (11, MCMCFIL, IER)
+C      IF (IER .NE. 0) THEN
+C         CALL STUPID ('Error opening output file '//MCMCFIL)
+C         MCMCFIL = 'GIVE UP'
+C         GO TO 25
+C      END IF
+C      CLOSE(25)
+C
+C
+C Inquire the name of the chisq_pix output file, and open it.
+C      CHISQPIXFIL=SWITCH(MCMCFIL, CASE('.ch2'))
+   26 CALL GETNAM ('File for CHISQ_PIXEL results:', CHISQPIXFIL)
+      IF ((CHISQPIXFIL .EQ. 'END-OF-FILE') .OR.
+     .     (CHISQPIXFIL .EQ. 'GIVE UP')) THEN
+         CALL CLFILE (4)
+         CHISQPIXFIL = ' '
+         RETURN
+      END IF
+C      
+C      CALL OUTFIL (1, CHISQPIXFIL, IER)
+C      IF (IER .NE. 0) THEN
+C         CALL STUPID ('Error opening output file '//CHISQPIXFIL)
+C         CHISQPIXFIL = 'GIVE UP'
+C         GO TO 9300
+C      END IF     
+C
+C
+C Inquire the name of the BEST_FIT output file, and open it.
+C      BESTFIL=SWITCH(CHISQPIXFIL, CASE('.bf'))
+   27 CALL GETNAM ('File for BEST_FIT results:', BESTFIL)
+      IF ((BESTFIL .EQ. 'END-OF-FILE') .OR.
+     .     (BESTFIL .EQ. 'GIVE UP')) THEN
+         CALL CLFILE (5)
+         BESTFIL = ' '
+         RETURN
+      END IF
+C      
+C      CALL OUTFIL (1, BESTFIL, IER)
+C      IF (IER .NE. 0) THEN
+C         CALL STUPID ('Error opening output file '//BESTFIL)
+C         BESTFIL = 'GIVE UP'
+C         GO TO 9300
+C      END IF
+      
       CALL WRHEAD (1, 1, NCOL, NROW, 7, LOBAD, HIBAD, THRESH, AP1, 
      .     PHPADU, RONOIS, RADIUS)
 C
@@ -943,12 +1000,12 @@ C      GO TO 2000
  9400 CONTINUE 
 C===================================================================================
 C--------------------
-C             MCMC Version 1.3 - 2020 October 21
+C             MCMC Version 1.4 - 2021 September 27
 C             S. Terry
 C
-C Markov chain Monte Carlo routine to fit blended
-C targets (two or three). Parameters that are 
-C currently fitted are star centroids (x_i,y_i), flux
+C Markov chain Monte Carlo routine to fit stellar
+C profiles (one, two, or three). Fitting parameters 
+C are star centroids (x_i,y_i), flux
 C ratio (f), and total flux (z).
 C
 C--------------------
@@ -988,7 +1045,9 @@ C      IYMAX = 836
       A19 = "Y"
       A20 = "CHISQ"
       A21 = "INTENSITY"
-      OPEN(25,FILE='mcmc_fit.dat',STATUS='UNKNOWN')
+      OPEN(25,FILE=MCMCFIL,STATUS='UNKNOWN')
+      OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
+      OPEN(27,FILE=BESTFIL,STATUS='UNKNOWN') 
 
       IX10_IN = 0.0
       IY10_IN = 0.0
@@ -1026,6 +1085,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IF0_IN
       WRITE(25,*) A1,A2,A7,A8
       WRITE(26,*) A18,A19,A20,A21
+      WRITE(27,*) A1,A2,A7,A8
       WRITE(*,*) "Fit box:", IXMIN,IXMAX,IYMIN,IYMAX
       WRITE(*,*) "Sky Avg:", SKYBAR
       WRITE(*,*) "Zeropoint Mag:", PSFMAG
@@ -1144,7 +1204,6 @@ C--------------------------------------------------------------
               EMIN = EEM
               ZMIN = ZM
          U = 1
-      OPEN(26,FILE='chisq_pixel.dat',STATUS='UNKNOWN')
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
@@ -1190,6 +1249,8 @@ C--------------------------------------------------------------
      .   CHI2"
        WRITE(*,*) X1MIN,Y1MIN,
      .            ZMIN,EMIN
+       WRITE(27,*) X1MIN,Y1MIN,
+     .            ZMIN,EMIN
        GO TO 9000
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
 C==============================================================
@@ -1213,6 +1274,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IF0_IN
       WRITE(25,*) A1,A2,A3,A4,A5,A6,A7,A15,A16,A8
       WRITE(26,*) A18,A19,A20,A21
+      WRITE(27,*) A1,A2,A3,A4,A5,A6,A7,A15,A16,A8
       WRITE(*,*) "Fit box:", IXMIN,IXMAX,IYMIN,IYMAX
       WRITE(*,*) "Sky Avg:", SKYBAR
       WRITE(*,*) "Zeropoint Mag:", PSFMAG
@@ -1355,7 +1417,6 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
               ZMIN = ZM
               EMIN = EEM
          U = 1
-      OPEN(26,FILE='chisq_pixel.dat',STATUS='UNKNOWN')
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
@@ -1367,7 +1428,7 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
           ENDDO
          CLOSE(26)
         ELSE
-        ENDIF
+        ENDIF 
       IF (EEM .LE. EE0) THEN
         IX10 = IX1M
         IX20 = IX2M
@@ -1377,8 +1438,8 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
         Z0 = ZM
         EE0 = EEM
         SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
-        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,((IFM*.001)*(ZM)),
-     .  ((1-IFM*.001)*(ZM)),EEM
+        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,
+     .  ((IFM*.001)*(ZM)), ((1-IFM*.001)*(ZM)),EEM
          U = 1
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
@@ -1399,8 +1460,8 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
         Z0 = ZM
         EE0 = EEM
         SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
-        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,((IFM*.001)*(ZM)),
-     .  ((1-IFM*.001)*(ZM)),EEM
+        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,
+     .  ((IFM*.001)*(ZM)), ((1-IFM*.001)*(ZM)),EEM
         ENDIF
       ENDIF
       IF (MOD(IT,50000)==0) WRITE(*,"(I8.2)") IT
@@ -1409,6 +1470,9 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
      .    Y2                   SEP                F_RATIO        F_TOTAL
      .           F1               F2               CHI2"
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,
+     .            PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
+     .            FMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),EMIN
+       WRITE(27,*) X1MIN,Y1MIN,X2MIN,Y2MIN,
      .            PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
      .            FMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),EMIN
        GO TO 9000
@@ -1437,6 +1501,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IFB0_IN
       WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A8
       WRITE(26,*) A18,A19,A20,A21
+      WRITE(27,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A8
       WRITE(*,*) "Fit box:", IXMIN,IXMAX,IYMIN,IYMAX
       WRITE(*,*) "Sky Avg:", SKYBAR
       WRITE(*,*) "Zeropoint Mag:", PSFMAG
@@ -1602,7 +1667,6 @@ C        EE0 = EE0 + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
               EMIN = EEM
               ZMIN = ZM
          U = 1                 
-      OPEN(26,FILE='chisq_pixel.dat',STATUS='UNKNOWN')
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
@@ -1669,6 +1733,12 @@ C        EE0 = EE0 + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
      . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2),
      .       FMIN,FBMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),
      .       (FBMIN*ZMIN),EMIN
+       WRITE(27,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
+     . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
+     . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2),
+     .       FMIN,FBMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),
+     .       (FBMIN*ZMIN),EMIN
+       GO TO 9000
 C------------------------------------
 C----------END OF MCMC-------------------------------------------------
 C------------------------------------
@@ -1681,9 +1751,16 @@ C
 C Normal return.
 C
  9000 CONTINUE
+      CLOSE(25)
+      CLOSE(26)
+      CLOSE(27)
       CALL CLFILE (1)
+C      CALL CLFILE (11)
       CALL STUPID ('   Done.  ')
       CALL CLFILE (2)
+      CALL CLFILE (3)
+C      CALL CLFILE (4)
+C      CALL CLFILE (5)
       RETURN
 C
 C-----------------------------------------------------------------------
