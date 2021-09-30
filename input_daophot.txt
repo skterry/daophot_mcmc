@@ -1,0 +1,16 @@
+attach image_1.fits
+nstar-mcmc
+image_1.psf
+image.grp
+image_1.nst
+image_1.mcmc
+image_1.chi2pix
+image_1.bf
+2
+9.942
+1
+25000
+420,561
+418,556
+0.54
+
