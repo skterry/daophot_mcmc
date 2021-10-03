@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 def corner(dir_mcmc, dir_out)
+
 if __name__ == '__main__':
 
     # Path, file names and MCMC parameters
