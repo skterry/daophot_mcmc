@@ -101,7 +101,7 @@ def avg_err_2star(dir_mcmc, dir_out, N_jackknife, prefix, N_burn):
 		ysep_avg.append(avgs2[k,3]-avgs2[k,1])
 		xsep_err.append(errs2[k,2]-errs2[k,0])
 		ysep_err.append(errs2[k,3]-errs2[k,1])
-	print(xsep_avg)
+	#print(xsep_avg)
 	#--------------------------------------------------------
 	#for i in range(len(data[0])): #Calculate separation in mas [9.942 mas/pix for Keck] and append to data.
 	#	xsep_avg.append((data[0][i,2]-data[0][i,0]))

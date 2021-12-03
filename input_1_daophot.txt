@@ -1,0 +1,16 @@
+attach mag_OB110950_1_kp_tdOpen.fits
+phot
+
+
+stars.coo
+mag_OB110950_1_kp_tdOpen.ap
+psf
+
+stars.lst
+mag_OB110950_1_kp_tdOpen.psf
+y
+y
+y
+y
+y
+
