@@ -55,6 +55,7 @@ plt.ylim(0.0,0.5)
 ax2.set_xlabel('Radius [pix]', fontsize=24)
 ax2.set_ylabel(r'$\chi^2$/pix', fontsize=24)
 plt.tick_params(which='both', length=8, width=1, labelsize=22, direction='in', right=True, top=True)
+plt.tight_layout()
 plt.savefig('chisq_per_pix.pdf')
 #plt.show()
 
