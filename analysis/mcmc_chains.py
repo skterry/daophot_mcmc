@@ -16,10 +16,10 @@ if not os.path.isdir('output/'):
 else:
     print('output', "folder already exists.")
 
-def twostarchains(dir_mcmc, dir_out):
+def twostarchains(dir_mcmc, dir_out, N_jackknife, prefix, N_burn):
 	print("\nStart Analysis")
 	print('----Plotting chains')
-	data = np.genfromtxt(dir_mcmc)
+	data = np.genfromtxt(dir_mcmc + prefix + '_ks.mcmc')
 	params = ['X1', 'Y1', 'X2', 'Y2', 'Separation', 'FluxRatio',
 	'FTOTAL', 'F1', 'F2', 'CHISQ']
 	for i in range(np.shape(data)[1]):
