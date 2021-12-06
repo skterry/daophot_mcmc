@@ -1,0 +1,34 @@
+daophot-mcmc (#1)
+ATTACH
+FIND
+PHOT
+PICK
+'filter *.lst stars
+PSF
+'update daophot.opt params
+'rename *.lst psf starlist
+'remove *.psf and *.nei files
+'rerun ATTACH/FIND/PHOT/PICK/PSF
+ALLSTAR (1star-fitting)
+'update *.coo file with star #2 guess
+-------------------------
+daophot-mcmc (#2)
+ATTACH
+PHOT
+ALLSTAR (2star-fitting)
+-------------------------
+'edit input_1_daophot.txt
+'edit jackknife_1_daophot.sh
+chmod 755 jackknife_daophot.sh
+./jackknife_daophot.sh #STEP1
+./jackknife_daophot.sh #STEP2
+-------------------------
+daophot-mcmc (#3)
+ATTACH
+GROUP
+'clean *.grp file
+'edit input_2_mcmcdaophot.txt
+'edit 2_mcmcjackknife.sh
+chmod 755 2_mcmcjackknife.sh
+./2_mcmcjackknife.sh #STEP1
+./2_mcmcjackknife.sh #STEP2
