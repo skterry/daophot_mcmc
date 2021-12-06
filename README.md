@@ -9,8 +9,8 @@ Some of the DAOPHOT-MCMC functionality includes:
 * Simultaneous 1-star, 2-star, and 3-star PSF fitting.
 * Metropolis-Hastings routine to calculate posterior probability distributions for positions, separations, flux ratios, and total flux.
 * Best-fit ![equation](https://latex.codecogs.com/gif.latex?%5Cchi%5E2)/pixel map to measure PSF stability.
-* (Optional) constraints on the total flux and separation(s).
-* (Optional) shell scripts (.sh) to automate MCMC runs on large number of frames.
+* (Optional) constraints on the total flux and separation(s) (source code edits required).
+* (Optional) shell scripts (.sh) to automate MCMC runs on large datasets.
 
 Detailed information can be found in the DAOPHOT-MCMC User's Manual [here](https://github.com/skterry/DAOPHOT-MCMC/blob/master/User_Manual.pdf).
 
