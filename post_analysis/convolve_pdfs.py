@@ -1,7 +1,5 @@
 ##################
-# Calculate average and standard deviations
-# for parameters from mcmc_fit.dat output.
-# Plot and save each chain.
+# Convolve several PDFs/CDFs together.
 ##################
 import os
 import sys

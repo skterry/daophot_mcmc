@@ -1,4 +1,5 @@
 ##################
+# Plot chains from *.mcmc outputs.
 # Calculate average and standard deviations
 # for parameters from *.mcmc outputs.
 ##################
