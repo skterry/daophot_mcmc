@@ -13,8 +13,8 @@ i.e. if fit box X=[1108,1129], Y=[1055,1089], then box_rad = 27 (round up to nea
 N_burn (int) - Burn in amount
 """
 
-from analysis.mcmc_chains import twostarchains, threestarchains, avg_err_2star, avg_err_3star
-from analysis.convolve_pdfs import pdf
+from post_analysis.mcmc_chains import twostarchains, threestarchains, avg_err_2star, avg_err_3star
+from post_analysis.convolve_pdfs import pdf
 #from analysis.corner_plot import corner
 #from analysis.jackknife_calc import calc
 
