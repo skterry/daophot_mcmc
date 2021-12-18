@@ -20,7 +20,7 @@ else:
 def twostarchains(dir_mcmc, dir_out, N_jackknife, prefix, N_burn):
 	print("\nStart Analysis")
 	print('----Plotting chains')
-	data = np.genfromtxt(dir_mcmc + prefix + '.mcmc')
+	data = np.genfromtxt(dir_mcmc + prefix + filt + '.mcmc')
 	params = ['X1', 'Y1', 'X2', 'Y2', 'Separation', 'FluxRatio',
 	'FTOTAL', 'F1', 'F2', 'CHISQ']
 	for i in range(np.shape(data)[1]):
@@ -72,7 +72,7 @@ def avg_err_2star(dir_mcmc, dir_out, N_jackknife, prefix, N_burn):
 		'FTOTAL', 'F1', 'F2', 'CHISQ', 'X2-X1[mas]', 'Y2-Y1[mas]']
 	for ee in range(N_jackknife):
 		data = []
-		lis = np.genfromtxt(dir_mcmc + prefix + str(ee+1) + '_kp_tdOpen.mcmc')
+		lis = np.genfromtxt(dir_mcmc + prefix + str(ee+1) + filt + '.mcmc')
 		data.append(lis)
 		for i in range(len(data[0][0])):
 			avgs.append(np.average(data[0][N_burn:len(data[0]),i]))
