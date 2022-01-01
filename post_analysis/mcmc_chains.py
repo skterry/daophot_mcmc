@@ -37,7 +37,7 @@ def twostarchains(dir_mcmc, dir_out, N_jackknife, prefix, N_burn):
 		plt.close(fig)
 
 
-def threestarchains(dir_mcmc, dir_out):
+def threestarchains(dir_mcmc, dir_out, N_jackknife, prefix, N_burn):
 	print("\nStart Analysis")
 	print('----Plotting chains')
 	data = np.genfromtxt(dir_mcmc + prefix + filt + '.mcmc')
@@ -125,7 +125,7 @@ def avg_err_2star(dir_mcmc, dir_out, N_jackknife, prefix, N_burn):
 	#final_list = np.append(avgs_errs, new_arr, axis=0)
 	#np.savetxt(dir_out + 'avg_err_' + str(N_burn) + 'burn.dat', final_list, fmt='%s')
 
-def avg_err_3star(dir_mcmc, dir_out, N_burn):
+def avg_err_3star(dir_mcmc, dir_out, N_jackknife, prefix, N_burn):
 	print('----Calculating averages and errors')
 	data = np.genfromtxt(dir_mcmc)
 	params = ['X1', 'Y1', 'X2', 'Y2', 'X3', 'Y3', 'Separation',
