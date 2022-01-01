@@ -33,17 +33,17 @@ box_rad = 20
 N_burn = 250
 
 
-twostarchains(dir_mcmc, dir_out, N_jackknife, prefix, N_burn)
-#avg_err_2star(dir_mcmc, dir_out, N_jackknife, prefix, N_burn)
+twostarchains(dir_mcmc, dir_out, N_jackknife, prefix, filt, N_burn)
+#avg_err_2star(dir_mcmc, dir_out, N_jackknife, prefix, filt, N_burn)
 #chi2pix(dir_chisq_pix, dir_out, box_rad)
 
-#pdf(dir_mcmc, dir_out, N_jackknife, prefix, N_burn)
+#pdf(dir_mcmc, dir_out, N_jackknife, prefix, filt, N_burn)
 
 
 
 #----------3 star MCMC-----------
-#threestarchains(dir_mcmc, dir_out) #uncomment this for 3star
-#avg_err_3star(dir_mcmc, dir_out) #uncomment this for 3star
+#threestarchains(dir_mcmc, dir_out, N_jackknife, prefix, filt, N_burn) #uncomment this for 3star
+#avg_err_3star(dir_mcmc, dir_out, N_jackknife, prefix, filt, N_burn) #uncomment this for 3star
 
 
 

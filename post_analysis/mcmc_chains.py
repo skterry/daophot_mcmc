@@ -40,7 +40,7 @@ def twostarchains(dir_mcmc, dir_out, N_jackknife, prefix, N_burn):
 def threestarchains(dir_mcmc, dir_out):
 	print("\nStart Analysis")
 	print('----Plotting chains')
-	data = np.genfromtxt(dir_mcmc)
+	data = np.genfromtxt(dir_mcmc + prefix + filt + '.mcmc')
 	params = ['X1', 'Y1', 'X2', 'Y2', 'X3', 'Y3', 'Separation',
 	'Flux1', 'Flux2', 'FTOTAL', 'F1', 'F2', 'F3', 'CHISQ']
 	for i in range(np.shape(data)[1]):
