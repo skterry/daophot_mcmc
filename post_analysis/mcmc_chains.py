@@ -41,14 +41,15 @@ def threestarchains(dir_mcmc, dir_out, N_jackknife, prefix, filt, N_burn):
 	print("\nStart Analysis")
 	print('----Plotting chains')
 	data = np.genfromtxt(dir_mcmc + prefix + filt + '.mcmc')
-	params = ['X1', 'Y1', 'X2', 'Y2', 'X3', 'Y3', 'Separation',
-	'Flux1', 'Flux2', 'FTOTAL', 'F1', 'F2', 'F3', 'CHISQ']
+	params = ['X1', 'Y1', 'X2', 'Y2', 'X3', 'Y3', 'S1-2_SEP',
+	'S1-3_SEP', 'S1-2_FRATIO', 'S1-3_FRATIO', 'FTOTAL', 'F1', 'F2', 'F3', 'CHISQ']
 	for i in range(np.shape(data)[1]):
 		fig = plt.figure(figsize=(8, 6))
 		ax = fig.add_subplot(111)
 
 		plt.plot(np.arange(0,len(data)), data[:,i])
 		plt.xlabel('step', fontsize=20)
+		#pdb.set_trace()
 		plt.ylabel(params[i], fontsize=20)
 		plt.tick_params(which='both', length=8, width=1, labelsize=20, direction='in', right=True, top=True)
 
