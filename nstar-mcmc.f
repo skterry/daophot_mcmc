@@ -59,7 +59,8 @@ C
 C
       CHARACTER LINE*80
       CHARACTER COOFIL*40, MAGFIL*40, PSFFIL*40, FITFIL*40, GRPFIL*40, 
-     .     MCMCFIL*80, CHISQPIXFIL*80, BESTFIL*80, SWITCH*40, EXTEND*40
+     .     MCMCFIL*80, CHISQPIXFIL*80, BESTFIL*80, SWITCH*40, EXTEND*40,
+     .     MCMCALL*80
       CHARACTER CASE*4
 
 
@@ -106,7 +107,7 @@ C
       INTEGER MAXUNK
       LOGICAL OMIT, REDO, CLIP
       COMMON /FILNAM/ COOFIL, MAGFIL, PSFFIL, FITFIL, GRPFIL, MCMCFIL
-      COMMON /FILNAM/ CHISQPIXFIL, BESTFIL
+      COMMON /FILNAM/ CHISQPIXFIL, BESTFIL, MCMCALL
 
 C
 C-----------------------------------------------------------------------
@@ -198,7 +199,26 @@ C
 C
 C Inquire the name of the MCMC output file, and open it.
 C      MCMCFIL=SWITCH(GRPFIL, CASE('.mc'))
-   25 CALL GETNAM ('File for MCMC results:', MCMCFIL)
+   24 CALL GETNAM ('File for FULL MCMC chain:', MCMCALL)
+      IF ((MCMCFIL .EQ. 'END-OF-FILE') .OR.
+     .     (MCMCFIL .EQ. 'GIVE UP')) THEN
+         CALL CLFILE (3)
+         MCMCFIL = ' '
+         RETURN
+      END IF
+C     
+C      CALL OUTFIL (11, MCMCFIL, IER)
+C      IF (IER .NE. 0) THEN
+C         CALL STUPID ('Error opening output file '//MCMCFIL)
+C         MCMCFIL = 'GIVE UP'
+C         GO TO 25
+C      END IF
+C      CLOSE(25)
+C
+C
+C Inquire the name of the MCMC output file, and open it.
+C      MCMCFIL=SWITCH(GRPFIL, CASE('.mc'))
+   25 CALL GETNAM ('File for ACCEPTED MCMC chains:', MCMCFIL)
       IF ((MCMCFIL .EQ. 'END-OF-FILE') .OR.
      .     (MCMCFIL .EQ. 'GIVE UP')) THEN
          CALL CLFILE (3)
@@ -1045,6 +1065,7 @@ C      IYMAX = 1226
       A19 = "Y"
       A20 = "CHISQ"
       A21 = "INTENSITY"
+      OPEN(24,FILE=MCMCALL,STATUS='UNKNOWN')
       OPEN(25,FILE=MCMCFIL,STATUS='UNKNOWN')
       OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
       OPEN(27,FILE=BESTFIL,STATUS='UNKNOWN') 
@@ -1272,6 +1293,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IX20_IN,IY20_IN
       WRITE(*,*) "Star 1 Flux Contribution (star 1/(star1 + star2)):"
       READ(*,*) IF0_IN
+      WRITE(24,*) A1,A2,A3,A4,A5,A6,A7,A15,A16,A8
       WRITE(25,*) A1,A2,A3,A4,A5,A6,A7,A15,A16,A8
       WRITE(26,*) A18,A19,A20,A21
       WRITE(27,*) A1,A2,A3,A4,A5,A6,A7,A15,A16,A8
@@ -1428,7 +1450,9 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
           ENDDO
          CLOSE(26)
         ELSE
-        ENDIF 
+        ENDIF
+        WRITE(24,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,
+     . ((IFM*.001)*(ZM)), ((1-IFM*.001)*(ZM)),EEM 
       IF (EEM .LE. EE0) THEN
         IX10 = IX1M
         IX20 = IX2M
