@@ -1000,7 +1000,7 @@ C      GO TO 2000
  9400 CONTINUE 
 C===================================================================================
 C--------------------
-C             MCMC Version 1.4 - 2021 September 27
+C             MCMC Version 1.4 - 2021 December 31
 C             S. Terry
 C
 C Markov chain Monte Carlo routine to fit stellar
@@ -1012,10 +1012,10 @@ C--------------------
 C===================================================================================
 C In order to manually adjust the size of the fitting box, uncomment and change
 C the values below this line.
-C      IXMIN = 879
-C      IXMAX = 908
-C      IYMIN = 811
-C      IYMAX = 836
+C      IXMIN = 1084
+C      IXMAX = 1101
+C      IYMIN = 1210
+C      IYMAX = 1226
 
       GRIDSIZE = ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))
       ALLOCATE (PPU_MIN(GRIDSIZE),FU(GRIDSIZE),FU_MIN(GRIDSIZE),
@@ -1027,7 +1027,7 @@ C      IYMAX = 836
       A3 = "X2_CENTER"
       A4 = "Y2_CENTER"
       A5 = "SEPARATION"
-      A6 = "FRATIO"
+      A6 = "S1_F_CONTRIB"
       A7 = "FTOTAL"
       A8 = "CHISQ"
 
@@ -1035,8 +1035,8 @@ C      IYMAX = 836
       A10 = "Y3_CENTER"
       A11 = "S1-2_SEP"
       A12 = "S1-3_SEP"
-      A13 = "S1-2_FRATIO"
-      A14 = "S1-3_FRATIO"
+      A13 = "S1_F_CONTRIB"
+      A14 = "S3_F_CONTRIB"
       A15 = "F1"
       A16 = "F2"
       A17 = "F3"
@@ -1270,7 +1270,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IX10_IN,IY10_IN
       WRITE(*,*) "Star 2 x,y:"
       READ(*,*) IX20_IN,IY20_IN
-      WRITE(*,*) "Star 1 Flux Contribution (0.0 - 1.0):"
+      WRITE(*,*) "Star 1 Flux Contribution (star 1/(star1 + star2)):"
       READ(*,*) IF0_IN
       WRITE(25,*) A1,A2,A3,A4,A5,A6,A7,A15,A16,A8
       WRITE(26,*) A18,A19,A20,A21
@@ -1467,7 +1467,7 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
       IF (MOD(IT,50000)==0) WRITE(*,"(I8.2)") IT
       ENDDO !End main MCMC iteration
        WRITE(*,*) "      X1               Y1               X2        
-     .    Y2                   SEP                F_RATIO        F_TOTAL
+     .    Y2                   SEP                S1_F_CONTRIB        F_TOTAL
      .           F1               F2               CHI2"
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,
      .            PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
@@ -1495,13 +1495,13 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IX20_IN,IY20_IN
       WRITE(*,*) "Star 3 x,y:"
       READ(*,*) IX30_IN,IY30_IN
-      WRITE(*,*) "Star 1 (brightest) Flux Contribution (0 - 1):"
+      WRITE(*,*) "Star1 Flux Contrib. (star 1/(star1 + star2 + star3)):"
       READ(*,*) IF0_IN
-      WRITE(*,*) "Star 3 (faintest) Flux Contribution (0 - 1):"
+      WRITE(*,*) "Star3 Flux Contrib. (star 3/(star1 + star2 + star3)):"
       READ(*,*) IFB0_IN
-      WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A8
+      WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A15,A16,A17,A8
       WRITE(26,*) A18,A19,A20,A21
-      WRITE(27,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A8
+      WRITE(27,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A15,A16,A17,A8
       WRITE(*,*) "Fit box:", IXMIN,IXMAX,IYMIN,IYMAX
       WRITE(*,*) "Sky Avg:", SKYBAR
       WRITE(*,*) "Zeropoint Mag:", PSFMAG
@@ -1568,7 +1568,7 @@ C-------------------------------------------------------------
          ENDDO
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
 C      SSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
-C        EE0 = EE0 + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
+C        EE0 = EE0 + EXP(((SSEP-26.35)/(4.49))**2)!SSEP Constraint Here
         U = 1 
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
@@ -1595,14 +1595,14 @@ C--------------------------------------------------------------
 C Begin MCMC LOOP
       DO IT = 1, Steps
       CALL RANDOM_NUMBER(RNARRAY)
-      IX1M = IX10 + (200*RNARRAY(1)-100)/800
-      IY1M = IY10 + (200*RNARRAY(2)-100)/800
-      IX2M = IX20 + (200*RNARRAY(3)-100)/800
-      IY2M = IY20 + (200*RNARRAY(4)-100)/800
-      IX3M = IX30 + (200*RNARRAY(5)-100)/800
-03      IY3M = IY30 + (200*RNARRAY(6)-100)/800
-02      IFM = IF0 + (200*RNARRAY(7)-100)/10
-01      IFBM = IFB0 + (200*RNARRAY(8)-100)/10
+      IX1M = IX10 + (200*RNARRAY(1)-100)/2400
+      IY1M = IY10 + (200*RNARRAY(2)-100)/2400
+      IX2M = IX20 + (200*RNARRAY(3)-100)/2400
+      IY2M = IY20 + (200*RNARRAY(4)-100)/2400
+      IX3M = IX30 + (200*RNARRAY(5)-100)/2400
+03      IY3M = IY30 + (200*RNARRAY(6)-100)/2400
+02      IFM = IF0 + (200*RNARRAY(7)-100)/18
+01      IFBM = IFB0 + (200*RNARRAY(8)-100)/18
 
 C      IF ((IFM .GE. 1000) .OR. (IFM .LE. 0)) THEN
 C       GO TO 02
@@ -1653,7 +1653,7 @@ C--------------------------------------------------------------
            ENDDO
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
 C      SSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
-C        EE0 = EE0 + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
+C        EE0 = EE0 + EXP(((SSEP-26.35)/(5.49))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
         IF (EEM .LT. EMIN) THEN
               X1MIN = X1
@@ -1726,7 +1726,7 @@ C        EE0 = EE0 + EXP(((SSEP-83.1)/(6.43))**2)!SSEP Constraint Here
       ENDDO !End main MCMC iteration
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2               X3               Y3           1-2SEP         
-     .   1-3SEP         F1_RATIO           F2_RATIO           F_TOTAL
+     .   1-3SEP         S1_F_CONTRIB           S3_F_CONTRIB           F_TOTAL
      .     F1              F2           F3              CHI2"
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
      . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
