@@ -1104,6 +1104,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IX10_IN,IY10_IN
       WRITE(*,*) "Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
+      WRITE(24,*) A1,A2,A7,A8
       WRITE(25,*) A1,A2,A7,A8
       WRITE(26,*) A18,A19,A20,A21
       WRITE(27,*) A1,A2,A7,A8
@@ -1237,6 +1238,7 @@ C--------------------------------------------------------------
          CLOSE(26)
         ELSE
         ENDIF
+        WRITE(24,*) X1,Y1,ZM,EEM
       IF (EEM .LE. EE0) THEN
         IX10 = IX1M
         IY10 = IY1M
@@ -1523,6 +1525,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IF0_IN
       WRITE(*,*) "Star3 Flux Contrib. (star 3/(star1 + star2 + star3)):"
       READ(*,*) IFB0_IN
+      WRITE(24,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A15,A16,A17,A
       WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A15,A16,A17,A8
       WRITE(26,*) A18,A19,A20,A21
       WRITE(27,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A15,A16,A17,A8
@@ -1703,6 +1706,8 @@ C        EE0 = EE0 + EXP(((SSEP-26.35)/(5.49))**2)!SSEP Constraint Here
          CLOSE(26)
         ELSE
         ENDIF
+        WRITE(24,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
+     .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
       IF (EEM .LE. EE0) THEN
         IX10 = IX1M
         IX20 = IX2M
