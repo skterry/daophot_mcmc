@@ -71,9 +71,9 @@ C
       REAL X1, Y1, X1MIN, Y1MIN
       REAL X2, Y2, X2MIN, Y2MIN
       REAL X3, Y3, X3MIN, Y3MIN
-      REAL FMIN, FBMIN, EMIN, ZMIN
+      REAL FMIN, FBMIN, EMIN, ZMIN, SSEPMIN
       REAL IX1M, IY1M, IX2M, IY2M, EEM_CHI2
-      REAL IX3M, IY3M, IFBM
+      REAL IX3M, IY3M, IFBM, LSSEPMIN, BSEPMIN
       REAL IFM, FIT_STARS, NLINES
       REAL, ALLOCATABLE :: PPU_MIN(:), EMIN_CHI2(:), EMINPIX(:)
       REAL PROB, PROB_RAND
@@ -1238,7 +1238,7 @@ C--------------------------------------------------------------
          CLOSE(26)
         ELSE
         ENDIF
-        WRITE(24,*) X1,Y1,ZM,EEM
+        WRITE(24,*) X1MIN,Y1MIN,ZMIN,EMIN
       IF (EEM .LE. EE0) THEN
         IX10 = IX1M
         IY10 = IY1M
@@ -1440,6 +1440,7 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
               FMIN = IFM * 0.001
               ZMIN = ZM
               EMIN = EEM
+              SSEPMIN = PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2)
          U = 1
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
@@ -1453,8 +1454,8 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
          CLOSE(26)
         ELSE
         ENDIF
-        WRITE(24,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,
-     . ((IFM*.001)*(ZM)), ((1-IFM*.001)*(ZM)),EEM 
+        WRITE(24,*) X1MIN,Y1MIN,X2MIN,Y2MIN,SSEPMIN,FMIN,ZMIN,
+     . ((FMIN)*(ZMIN)), ((1-FMIN)*(ZMIN)),EMIN 
       IF (EEM .LE. EE0) THEN
         IX10 = IX1M
         IX20 = IX2M
@@ -1493,7 +1494,7 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
       IF (MOD(IT,50000)==0) WRITE(*,"(I8.2)") IT
       ENDDO !End main MCMC iteration
        WRITE(*,*) "      X1               Y1               X2        
-     .    Y2                   SEP                S1_F_CONTRIB        F_TOTAL
+     .    Y2            SEP          S1_F_CONTRIB        F_TOTAL
      .           F1               F2               CHI2"
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,
      .            PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
@@ -1525,7 +1526,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IF0_IN
       WRITE(*,*) "Star3 Flux Contrib. (star 3/(star1 + star2 + star3)):"
       READ(*,*) IFB0_IN
-      WRITE(24,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A15,A16,A17,A
+      WRITE(24,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A15,A16,A17,A8
       WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A15,A16,A17,A8
       WRITE(26,*) A18,A19,A20,A21
       WRITE(27,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A15,A16,A17,A8
@@ -1693,6 +1694,8 @@ C        EE0 = EE0 + EXP(((SSEP-26.35)/(5.49))**2)!SSEP Constraint Here
               FBMIN = IFBM * 0.001
               EMIN = EEM
               ZMIN = ZM
+              LSSEPMIN=PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2)
+              BSEPMIN=PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2)
          U = 1                 
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
@@ -1706,7 +1709,8 @@ C        EE0 = EE0 + EXP(((SSEP-26.35)/(5.49))**2)!SSEP Constraint Here
          CLOSE(26)
         ELSE
         ENDIF
-        WRITE(24,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
+        WRITE(24,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
+     .  LSSEPMIN,BSEPMIN,FMIN,FBMIN,
      .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
       IF (EEM .LE. EE0) THEN
         IX10 = IX1M
@@ -1755,7 +1759,7 @@ C        EE0 = EE0 + EXP(((SSEP-26.35)/(5.49))**2)!SSEP Constraint Here
       ENDDO !End main MCMC iteration
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2               X3               Y3           1-2SEP         
-     .   1-3SEP         S1_F_CONTRIB           S3_F_CONTRIB           F_TOTAL
+     .   1-3SEP      S1_F_CONTRIB     S3_F_CONTRIB      F_TOTAL
      .     F1              F2           F3              CHI2"
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
      . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
