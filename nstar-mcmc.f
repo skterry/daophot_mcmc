@@ -77,8 +77,8 @@ C
       REAL IFM, FIT_STARS, NLINES
       REAL, ALLOCATABLE :: PPU_MIN(:), EMIN_CHI2(:), EMINPIX(:)
       REAL PROB, PROB_RAND
-      REAL*8 EE0, EE0_NORM, RFAC
-      REAL*8 PTOT, FTOT, PIXSCALE
+      REAL*8 EE0, EE0_NORM, RFAC, PSTEP, FSTEP
+      REAL*8 PTOT, FTOT, PIXSCALE, ACCEPT_RAT, ACC_ARRAY
       REAL*8 Z0, LSSEP, BSEP
       REAL*8 CHISQ, CHISQ_MIN
       REAL*8 F, F1, F2
@@ -1075,6 +1075,7 @@ C      IYMAX = 1226
       IX20_IN = 0.0
       IY20_IN = 0.0
       IF0_IN = 0.0
+      ACC_ARRAY = 0.0
 
 
       WRITE(*,*)  "1, 2, or 3 star fit:"
@@ -1100,6 +1101,10 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
       READ(*,*) Steps
+      WRITE(*,*)  "Step size pixel (goal: accept. rate -> 0.1 - 0.5):"
+      READ(*,*) PSTEP
+      WRITE(*,*)  "Step size flux (goal: accept. rate -> 0.1 - 0.5):"
+      READ(*,*) FSTEP
       WRITE(*,*) "Star x,y:"
       READ(*,*) IX10_IN,IY10_IN
       WRITE(*,*) "Flux Contribution (0.0 - 1.0):"
@@ -1176,9 +1181,9 @@ C--------------------------------------------------------------
 C Begin MCMC LOOP
       DO IT = 1, Steps
       CALL RANDOM_NUMBER(RNARRAY)
-      IX1M = IX10 + (200*RNARRAY(1)-100)/1300
-      IY1M = IY10 + (200*RNARRAY(2)-100)/1300
-22      IFM = IF0 + (200*RNARRAY(5)-100)/12
+      IX1M = IX10 + (200*RNARRAY(1)-100)*(PSTEP*0.01)
+      IY1M = IY10 + (200*RNARRAY(2)-100)*(PSTEP*0.01)
+22      IFM = IF0 + (200*RNARRAY(5)-100)*(FSTEP*0.1)
 
 C      IF ((IFM .GE. 1000) .OR. (IFM .LE. 0)) THEN
 C       GO TO 22
@@ -1245,6 +1250,7 @@ C--------------------------------------------------------------
         IF0 = IFM
         Z0 = ZM
         EE0 = EEM
+        ACC_ARRAY = ACC_ARRAY + 1
         WRITE(25,*) X1,Y1,ZM,EEM
          U = 1
          DO IX=IXMIN,IXMAX
@@ -1263,11 +1269,17 @@ C--------------------------------------------------------------
         IF0 = IFM
         Z0 = ZM
         EE0 = EEM
+        ACC_ARRAY = ACC_ARRAY + 1
         WRITE(25,*) X1,Y1,ZM,EEM
       ENDIF
       ENDIF
       IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
       ENDDO !End main MCMC iteration
+       WRITE(*,*) "Acceptance Rate = ", ACC_ARRAY/Steps
+       IF (ACC_ARRAY/Steps .LE. 0.10) WRITE(*,*)
+     . "WARNING!! Acceptance rate less than 0.10!"
+       IF (ACC_ARRAY/Steps .GE. 0.50) WRITE(*,*)
+     . "WARNING!! Acceptance rate larger than 0.50!"
        WRITE(*,*) "      X1               Y1             F_TOT        
      .   CHI2"
        WRITE(*,*) X1MIN,Y1MIN,
@@ -1289,6 +1301,10 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
       READ(*,*) Steps
+      WRITE(*,*)  "Step size pixel (goal: accept. rate -> 0.1 - 0.5):"
+      READ(*,*) PSTEP
+      WRITE(*,*)  "Step size flux (goal: accept. rate -> 0.1 - 0.5):"
+      READ(*,*) FSTEP
       WRITE(*,*) "Star 1 x,y:"
       READ(*,*) IX10_IN,IY10_IN
       WRITE(*,*) "Star 2 x,y:"
@@ -1380,11 +1396,11 @@ C--------------------------------------------------------------
 C Begin MCMC LOOP
       DO IT = 1, Steps
       CALL RANDOM_NUMBER(RNARRAY)
-      IX1M = IX10 + (200*RNARRAY(1)-100)/1500
-      IY1M = IY10 + (200*RNARRAY(2)-100)/1500
-      IX2M = IX20 + (200*RNARRAY(3)-100)/1500
-13      IY2M = IY20 + (200*RNARRAY(4)-100)/1500
-12      IFM = IF0 + (200*RNARRAY(5)-100)/12
+      IX1M = IX10 + (200*RNARRAY(1)-100)*(PSTEP*0.01)
+      IY1M = IY10 + (200*RNARRAY(2)-100)*(PSTEP*0.01)
+      IX2M = IX20 + (200*RNARRAY(3)-100)*(PSTEP*0.01)
+13      IY2M = IY20 + (200*RNARRAY(4)-100)*(PSTEP*0.01)
+12      IFM = IF0 + (200*RNARRAY(5)-100)*(FSTEP*0.1)
 
 C      IF ((IFM .GE. 1000) .OR. (IFM .LE. 0)) THEN
 C       GO TO 12
@@ -1465,6 +1481,7 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
         Z0 = ZM
         EE0 = EEM
         SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
+        ACC_ARRAY = ACC_ARRAY + 1
         WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,
      .  ((IFM*.001)*(ZM)), ((1-IFM*.001)*(ZM)),EEM
          U = 1
@@ -1487,12 +1504,18 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
         Z0 = ZM
         EE0 = EEM
         SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
+        ACC_ARRAY = ACC_ARRAY + 1
         WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,
      .  ((IFM*.001)*(ZM)), ((1-IFM*.001)*(ZM)),EEM
         ENDIF
       ENDIF
       IF (MOD(IT,50000)==0) WRITE(*,"(I8.2)") IT
       ENDDO !End main MCMC iteration
+       WRITE(*,*) "Acceptance Rate = ", ACC_ARRAY/Steps
+       IF (ACC_ARRAY/Steps .LE. 0.10) WRITE(*,*)
+     . "WARNING!! Acceptance rate less than 0.10!"
+       IF (ACC_ARRAY/Steps .GE. 0.50) WRITE(*,*)
+     . "WARNING!! Acceptance rate larger than 0.50!"
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2            SEP          S1_F_CONTRIB        F_TOTAL
      .           F1               F2               CHI2"
@@ -1516,6 +1539,10 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
       READ(*,*) Steps
+      WRITE(*,*)  "Step size pixel (goal: accept. rate -> 0.1 - 0.5):"
+      READ(*,*) PSTEP
+      WRITE(*,*)  "Step size flux (goal: accept. rate -> 0.1 - 0.5):"
+      READ(*,*) FSTEP
       WRITE(*,*) "Star 1 x,y:"
       READ(*,*) IX10_IN,IY10_IN
       WRITE(*,*) "Star 2 x,y:"
@@ -1623,14 +1650,14 @@ C--------------------------------------------------------------
 C Begin MCMC LOOP
       DO IT = 1, Steps
       CALL RANDOM_NUMBER(RNARRAY)
-      IX1M = IX10 + (200*RNARRAY(1)-100)/2400
-      IY1M = IY10 + (200*RNARRAY(2)-100)/2400
-      IX2M = IX20 + (200*RNARRAY(3)-100)/2400
-      IY2M = IY20 + (200*RNARRAY(4)-100)/2400
-      IX3M = IX30 + (200*RNARRAY(5)-100)/2400
-03      IY3M = IY30 + (200*RNARRAY(6)-100)/2400
-02      IFM = IF0 + (200*RNARRAY(7)-100)/18
-01      IFBM = IFB0 + (200*RNARRAY(8)-100)/18
+      IX1M = IX10 + (200*RNARRAY(1)-100)*(PSTEP*0.01)
+      IY1M = IY10 + (200*RNARRAY(2)-100)*(PSTEP*0.01)
+      IX2M = IX20 + (200*RNARRAY(3)-100)*(PSTEP*0.01)
+      IY2M = IY20 + (200*RNARRAY(4)-100)*(PSTEP*0.01)
+      IX3M = IX30 + (200*RNARRAY(5)-100)*(PSTEP*0.01)
+03      IY3M = IY30 + (200*RNARRAY(6)-100)*(PSTEP*0.01)
+02      IFM = IF0 + (200*RNARRAY(7)-100)*(FSTEP*0.1)
+01      IFBM = IFB0 + (200*RNARRAY(8)-100)*(FSTEP*0.1)
 
 C      IF ((IFM .GE. 1000) .OR. (IFM .LE. 0)) THEN
 C       GO TO 02
@@ -1725,6 +1752,7 @@ C        EE0 = EE0 + EXP(((SSEP-26.35)/(5.49))**2)!SSEP Constraint Here
         EE0 = EEM
         LSSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
         BSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
+        ACC_ARRAY = ACC_ARRAY + 1
         WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
      .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
          U = 1
@@ -1751,12 +1779,18 @@ C        EE0 = EE0 + EXP(((SSEP-26.35)/(5.49))**2)!SSEP Constraint Here
         EE0 = EEM
         LSSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
         BSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
+        ACC_ARRAY = ACC_ARRAY + 1
         WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
      .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
       ENDIF
       ENDIF
       IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
       ENDDO !End main MCMC iteration
+       WRITE(*,*) "Acceptance Rate = ", ACC_ARRAY/Steps
+       IF (ACC_ARRAY/Steps .LE. 0.10) WRITE(*,*)
+     . "WARNING!! Acceptance rate less than 0.10!"
+       IF (ACC_ARRAY/Steps .GE. 0.50) WRITE(*,*)
+     . "WARNING!! Acceptance rate larger than 0.50!"
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2               X3               Y3           1-2SEP         
      .   1-3SEP      S1_F_CONTRIB     S3_F_CONTRIB      F_TOTAL
@@ -1784,6 +1818,7 @@ C
 C Normal return.
 C
  9000 CONTINUE
+      CLOSE(24)
       CLOSE(25)
       CLOSE(26)
       CLOSE(27)
