@@ -1020,8 +1020,8 @@ C      GO TO 2000
  9400 CONTINUE 
 C===================================================================================
 C--------------------
-C             MCMC Version 1.4 - 2021 December 31
-C             S. Terry
+C             MCMC Version 1.5 - 2022 March 14
+C             S.K. Terry
 C
 C Markov chain Monte Carlo routine to fit stellar
 C profiles (one, two, or three). Fitting parameters 
