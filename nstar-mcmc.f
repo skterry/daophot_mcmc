@@ -1243,7 +1243,6 @@ C--------------------------------------------------------------
          CLOSE(26)
         ELSE
         ENDIF
-        WRITE(24,*) X1MIN,Y1MIN,ZMIN,EMIN
       IF (EEM .LE. EE0) THEN
         IX10 = IX1M
         IY10 = IY1M
@@ -1273,6 +1272,7 @@ C--------------------------------------------------------------
         WRITE(25,*) X1,Y1,ZM,EEM
       ENDIF
       ENDIF
+      WRITE(24,*) IX10,IY10,Z0,EE0
       IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
       ENDDO !End main MCMC iteration
        WRITE(*,*) "Acceptance Rate = ", ACC_ARRAY/Steps
