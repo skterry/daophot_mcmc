@@ -1470,8 +1470,6 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
          CLOSE(26)
         ELSE
         ENDIF
-        WRITE(24,*) X1MIN,Y1MIN,X2MIN,Y2MIN,SSEPMIN,FMIN,ZMIN,
-     . ((FMIN)*(ZMIN)), ((1-FMIN)*(ZMIN)),EMIN 
       IF (EEM .LE. EE0) THEN
         IX10 = IX1M
         IX20 = IX2M
@@ -1509,6 +1507,8 @@ C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
      .  ((IFM*.001)*(ZM)), ((1-IFM*.001)*(ZM)),EEM
         ENDIF
       ENDIF
+      WRITE(24,*) IX10,IY10,IX20,IY20,SSEP,IF0*0.001,Z0,
+     .  ((IF0*.001)*(Z0)), ((1-IF0*.001)*(Z0)),EE0
       IF (MOD(IT,50000)==0) WRITE(*,"(I8.2)") IT
       ENDDO !End main MCMC iteration
        WRITE(*,*) "Acceptance Rate = ", ACC_ARRAY/Steps
