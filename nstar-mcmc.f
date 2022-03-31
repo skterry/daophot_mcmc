@@ -1782,8 +1782,8 @@ C        EE0 = EE0 + EXP(((SSEP-26.35)/(5.49))**2)!SSEP Constraint Here
       ENDIF
       ENDIF
       WRITE(24,*) IX10,IY10,IX20,IY20,IX30,IY30,
-      LSSEP,BSEP,IF0*0.001,IFB0*0.001,Z0,
-      ((IF0*.001)*(Z0)),((1-IF0*.001)*(Z0)),((IFB0*.001)*(Z0)),EE0
+     . LSSEP,BSEP,IF0*0.001,IFB0*0.001,Z0,
+     . ((IF0*.001)*(Z0)),((1-IF0*.001)*(Z0)),((IFB0*.001)*(Z0)),EE0
       IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
       ENDDO !End main MCMC iteration
        WRITE(*,*) "Acceptance Rate = ", ACC_ARRAY/Steps
