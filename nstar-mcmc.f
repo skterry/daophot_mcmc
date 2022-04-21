@@ -1020,7 +1020,7 @@ C      GO TO 2000
  9400 CONTINUE 
 C===================================================================================
 C--------------------
-C             MCMC Version 1.5 - 2022 March 14
+C             MCMC Version 1.5 - 2022 April 19
 C             S.K. Terry
 C
 C Markov chain Monte Carlo routine to fit stellar
@@ -1373,7 +1373,7 @@ C-------------------------------------------------------------
          ENDDO
 C         EE0 = EE0 + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
 C      SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
-C        EE0 = EE0 + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
+C        EE0 = EE0 + EXP(((SSEP-75.0)/(5.73))**2)!SSEP Constraint Here
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
@@ -1446,7 +1446,7 @@ C--------------------------------------------------------------
            ENDDO
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
 C      SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
-C        EEM = EEM + EXP(((SSEP-100.0)/(15.73))**2)!SSEP Constraint Here
+C        EEM = EEM + EXP(((SSEP-75.0)/(5.73))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
         IF (EEM .LT. EMIN) THEN
               X1MIN = X1
@@ -1565,8 +1565,8 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       IY10 = IY10_IN !initial source y
       IX20 = IX20_IN !initial lens x
       IY20 = IY20_IN !initial lens y
-      IX30 = IX30_IN !initial lens x
-      IY30 = IY30_IN !initial lens y
+      IX30 = IX30_IN !initial blend x
+      IY30 = IY30_IN !initial blend y
       IF0 = 1000*IF0_IN !initial flux ratio
       IFB0 = 1000*IFB0_IN !initial flux ratio
       U = 1
@@ -1622,8 +1622,8 @@ C-------------------------------------------------------------
          ENDDO
          ENDDO
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
-C      SSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
-C        EE0 = EE0 + EXP(((SSEP-26.35)/(4.49))**2)!SSEP Constraint Here
+C      SSEP = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
+C        EE0 = EE0 + EXP(((SSEP-27.00)/(4.00))**2)!SSEP Constraint Here
         U = 1 
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
@@ -1707,8 +1707,8 @@ C--------------------------------------------------------------
            ENDDO
            ENDDO
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
-C      SSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
-C        EE0 = EE0 + EXP(((SSEP-26.35)/(5.49))**2)!SSEP Constraint Here
+C      SSEP = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
+C        EEM = EEM + EXP(((SSEP-27.00)/(4.00))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
         IF (EEM .LT. EMIN) THEN
               X1MIN = X1
