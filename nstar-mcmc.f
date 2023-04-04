@@ -82,7 +82,7 @@ C
       REAL*8 Z0, LSSEP, BSEP
       REAL*8 CHISQ, CHISQ_MIN
       REAL*8 F, F1, F2
-      REAL SSEP, ZM, EEM
+      REAL SSEP, SSEP2, ZM, EEM
       REAL, ALLOCATABLE :: FU(:), FU_MIN(:)
       REAL, ALLOCATABLE :: SGU(:), SGL(:), SGU2(:), PPU(:)
       INTEGER IF2, Steps, IT, GRIDSIZE
@@ -1020,7 +1020,7 @@ C      GO TO 2000
  9400 CONTINUE 
 C===================================================================================
 C--------------------
-C             MCMC Version 1.5 - 2022 April 19
+C             MCMC Version 1.5.0 - 2023 April 4
 C             S.K. Terry
 C
 C Markov chain Monte Carlo routine to fit stellar
@@ -1539,9 +1539,9 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
       READ(*,*) Steps
-      WRITE(*,*)  "Step size pixel (goal: accept. rate -> 0.1 - 0.5):"
+      WRITE(*,*)  "Step size pixel (goal: accept. rate -> 0.2 - 0.5):"
       READ(*,*) PSTEP
-      WRITE(*,*)  "Step size flux (goal: accept. rate -> 0.1 - 0.5):"
+      WRITE(*,*)  "Step size flux (goal: accept. rate -> 0.2 - 0.5):"
       READ(*,*) FSTEP
       WRITE(*,*) "Star 1 x,y:"
       READ(*,*) IX10_IN,IY10_IN
@@ -1552,6 +1552,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       WRITE(*,*) "Star1 Flux Contrib. (star 1/(star1 + star2 + star3)):"
       READ(*,*) IF0_IN
       WRITE(*,*) "Star3 Flux Contrib. (star 3/(star1 + star2 + star3)):"
+      WRITE(*,*) "This should be the FAINTEST star!"
       READ(*,*) IFB0_IN
       WRITE(24,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A15,A16,A17,A8
       WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A15,A16,A17,A8
@@ -1622,8 +1623,10 @@ C-------------------------------------------------------------
          ENDDO
          ENDDO
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
-C      SSEP = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
-C        EE0 = EE0 + EXP(((SSEP-27.00)/(4.00))**2)!SSEP Constraint Here
+      SSEP = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
+      SSEP2 = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
+        EE0 = EE0 + EXP(((SSEP-26.50)/(2.50))**2)
+     .  + EXP(((SSEP2-44.00)/(10.00))**2)!SSEP Constraint Here
         U = 1 
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
@@ -1707,8 +1710,10 @@ C--------------------------------------------------------------
            ENDDO
            ENDDO
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
-C      SSEP = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
-C        EEM = EEM + EXP(((SSEP-27.00)/(4.00))**2)!SSEP Constraint Here
+      SSEP = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
+      SSEP2 = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
+        EEM = EEM + EXP(((SSEP-26.50)/(2.50))**2)
+     .  + EXP(((SSEP2-44.00)/(10.00))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
         IF (EEM .LT. EMIN) THEN
               X1MIN = X1
