@@ -1020,11 +1020,11 @@ C      GO TO 2000
  9400 CONTINUE 
 C===================================================================================
 C--------------------
-C             MCMC Version 1.5.0 - 2023 April 4
+C             MCMC Version 1.5.0 - 2023 April 12
 C             S.K. Terry
 C
 C Markov chain Monte Carlo routine to fit stellar
-C profiles (one, two, or three). Fitting parameters 
+C profiles (one, two, or three stars). Fitting parameters 
 C are star centroids (x_i,y_i), flux
 C ratio (f), and total flux (z).
 C
@@ -1096,7 +1096,7 @@ C              1-STAR-FIT
 C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
  9500 WRITE(*,"(a,I4.2)") "Degrees of Freedom = ",
-     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-3
+     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+3
       WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
       READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
@@ -1130,6 +1130,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         FU(U)=(F )*USEPSF(IPSTYP, IX-X1, IY-Y1, BRIGHT,
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
         PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
+C        PPU(U) = (DATA(IX,IY)) !raw pixel value only
         U = U + 1
          ENDDO
          ENDDO
@@ -1176,7 +1177,8 @@ C-------------------------------------------------------------
          FMIN = F
          EMIN = EE0
          ZMIN = Z0
-      WRITE (25,*) X1MIN, Y1MIN, ZMIN, EMIN
+C      WRITE (25,*) X1MIN, Y1MIN, ZMIN, EMIN
+      WRITE (25,*) X1MIN, Y1MIN, FMIN, EMIN
 C--------------------------------------------------------------
 C Begin MCMC LOOP
       DO IT = 1, Steps
@@ -1200,6 +1202,7 @@ C--------------------------------------------------------------
               FU(U)=(F )*USEPSF(IPSTYP, IX-X1, IY-Y1, BRIGHT,
      .        PAR,PSF,NPSF,NPAR,NEXP,NFRAC,DELTAX,DELTAY,DVDXC,DVDYC)
               PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
+C              PPU(U) = (DATA(IX,IY)) !raw pixel value
               U = U + 1
               ENDDO
               ENDDO
@@ -1250,7 +1253,8 @@ C--------------------------------------------------------------
         Z0 = ZM
         EE0 = EEM
         ACC_ARRAY = ACC_ARRAY + 1
-        WRITE(25,*) X1,Y1,ZM,EEM
+C        WRITE(25,*) X1,Y1,ZM,EEM
+        WRITE(25,*) X1,Y1,IF0*0.001,EEM
          U = 1
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
@@ -1269,12 +1273,17 @@ C--------------------------------------------------------------
         Z0 = ZM
         EE0 = EEM
         ACC_ARRAY = ACC_ARRAY + 1
-        WRITE(25,*) X1,Y1,ZM,EEM
+C        WRITE(25,*) X1,Y1,ZM,EEM
+        WRITE(25,*) X1,Y1,IFM*0.001,EEM
       ENDIF
       ENDIF
-      WRITE(24,*) IX10,IY10,Z0,EE0
+C      WRITE(24,*) IX10,IY10,Z0,EE0
+      WRITE(24,*) IX10,IY10,IF0*0.001,EE0
       IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
       ENDDO !End main MCMC iteration
+       IF (RFAC .EQ. 1.00) WRITE(*,*)
+     . "Renormalization Factor = ",
+     . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+3)
        WRITE(*,*) "Acceptance Rate = ", ACC_ARRAY/Steps
        IF (ACC_ARRAY/Steps .LE. 0.10) WRITE(*,*)
      . "WARNING!! Acceptance rate less than 0.10!"
@@ -1282,10 +1291,14 @@ C--------------------------------------------------------------
      . "WARNING!! Acceptance rate larger than 0.50!"
        WRITE(*,*) "      X1               Y1             F_TOT        
      .   CHI2"
+C       WRITE(*,*) X1MIN,Y1MIN,
+C     .            ZMIN,EMIN
+C       WRITE(27,*) X1MIN,Y1MIN,
+C     .            ZMIN,EMIN
        WRITE(*,*) X1MIN,Y1MIN,
-     .            ZMIN,EMIN
+     .            FMIN,EMIN
        WRITE(27,*) X1MIN,Y1MIN,
-     .            ZMIN,EMIN
+     .            FMIN,EMIN
        GO TO 9000
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
 C==============================================================
@@ -1294,7 +1307,7 @@ C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  
  9600 WRITE(*,"(a,I4.2)") "Degrees of Freedom =",
-     .((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-6
+     .((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+6
       WRITE(*,*) "Pixel Scale (mas/pix):"
       READ(*,*) PIXSCALE
       WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
@@ -1310,11 +1323,12 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       WRITE(*,*) "Star 2 x,y:"
       READ(*,*) IX20_IN,IY20_IN
       WRITE(*,*) "Star 1 Flux Contribution (star 1/(star1 + star2)):"
+      WRITE(*,*) "Choose the BRIGHTER star!"
       READ(*,*) IF0_IN
-      WRITE(24,*) A1,A2,A3,A4,A5,A6,A7,A15,A16,A8
-      WRITE(25,*) A1,A2,A3,A4,A5,A6,A7,A15,A16,A8
+      WRITE(24,*) A1,A2,A3,A4,A5,A15,A16,A8
+      WRITE(25,*) A1,A2,A3,A4,A5,A15,A16,A8
       WRITE(26,*) A18,A19,A20,A21
-      WRITE(27,*) A1,A2,A3,A4,A5,A6,A7,A15,A16,A8
+      WRITE(27,*) A1,A2,A3,A4,A5,A15,A16,A8
       WRITE(*,*) "Fit box:", IXMIN,IXMAX,IYMIN,IYMAX
       WRITE(*,*) "Sky Avg:", SKYBAR
       WRITE(*,*) "Zeropoint Mag:", PSFMAG
@@ -1338,6 +1352,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
      .  + (1-F)*USEPSF(IPSTYP, IX-X2, IY-Y2, BRIGHT,
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
         PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
+C        PPU(U) = (DATA(IX,IY)) !raw pixel value
         U = U + 1
          ENDDO
          ENDDO
@@ -1389,9 +1404,12 @@ C        EE0 = EE0 + EXP(((SSEP-75.0)/(5.73))**2)!SSEP Constraint Here
          FMIN = F
          EMIN = EE0
          ZMIN = Z0
+C      WRITE (25,*) X1MIN, Y1MIN, X2MIN, Y2MIN,
+C     . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2), FMIN, ZMIN, 
+C     . (FMIN*ZMIN), ((1-FMIN)*(ZMIN)), EMIN
       WRITE (25,*) X1MIN, Y1MIN, X2MIN, Y2MIN,
-     . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2), FMIN, ZMIN, 
-     . (FMIN*ZMIN), ((1-FMIN)*(ZMIN)), EMIN
+     . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2), FMIN, 
+     . (1-FMIN), EMIN
 C--------------------------------------------------------------
 C Begin MCMC LOOP
       DO IT = 1, Steps
@@ -1421,6 +1439,7 @@ C--------------------------------------------------------------
      .        + (1-F)*USEPSF(IPSTYP, IX-X2, IY-Y2, BRIGHT,
      .        PAR,PSF,NPSF,NPAR,NEXP,NFRAC,DELTAX,DELTAY,DVDXC,DVDYC)
               PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
+C              PPU(U) = (DATA(IX,IY)) !raw pixel value only
               U = U + 1
               ENDDO
               ENDDO
@@ -1480,8 +1499,10 @@ C        EEM = EEM + EXP(((SSEP-75.0)/(5.73))**2)!SSEP Constraint Here
         EE0 = EEM
         SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
         ACC_ARRAY = ACC_ARRAY + 1
-        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,
-     .  ((IFM*.001)*(ZM)), ((1-IFM*.001)*(ZM)),EEM
+C        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,
+C     .  ((IFM*.001)*(ZM)), ((1-IFM*.001)*(ZM)),EEM
+        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,
+     .  (1-IFM*.001),EEM
          U = 1
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
@@ -1503,28 +1524,45 @@ C        EEM = EEM + EXP(((SSEP-75.0)/(5.73))**2)!SSEP Constraint Here
         EE0 = EEM
         SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
         ACC_ARRAY = ACC_ARRAY + 1
-        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,
-     .  ((IFM*.001)*(ZM)), ((1-IFM*.001)*(ZM)),EEM
+C        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,
+C     .  ((IFM*.001)*(ZM)), ((1-IFM*.001)*(ZM)),EEM
+        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,
+     .  (1-IFM*.001),EEM
         ENDIF
       ENDIF
-      WRITE(24,*) IX10,IY10,IX20,IY20,SSEP,IF0*0.001,Z0,
-     .  ((IF0*.001)*(Z0)), ((1-IF0*.001)*(Z0)),EE0
+C      WRITE(24,*) IX10,IY10,IX20,IY20,SSEP,IF0*0.001,Z0,
+C     .  ((IF0*.001)*(Z0)), ((1-IF0*.001)*(Z0)),EE0
+      WRITE(24,*) IX10,IY10,IX20,IY20,SSEP,IF0*0.001,
+     .  (1-IF0*.001),EE0
       IF (MOD(IT,50000)==0) WRITE(*,"(I8.2)") IT
       ENDDO !End main MCMC iteration
+       IF (RFAC .EQ. 1.00) WRITE(*,*)
+     . "Renormalization Factor = ",
+     . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+6)
        WRITE(*,*) "Acceptance Rate = ", ACC_ARRAY/Steps
        IF (ACC_ARRAY/Steps .LE. 0.10) WRITE(*,*)
      . "WARNING!! Acceptance rate less than 0.10!"
        IF (ACC_ARRAY/Steps .GE. 0.50) WRITE(*,*)
      . "WARNING!! Acceptance rate larger than 0.50!"
+C       WRITE(*,*) "      X1               Y1               X2        
+C     .    Y2            SEP          S1_F_CONTRIB        F_TOTAL
+C     .           F1               F2               CHI2"
+C       WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,
+C     .            PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
+C     .            FMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),EMIN
+C       WRITE(27,*) X1MIN,Y1MIN,X2MIN,Y2MIN,
+C     .            PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
+C     .            FMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),EMIN
+
        WRITE(*,*) "      X1               Y1               X2        
-     .    Y2            SEP          S1_F_CONTRIB        F_TOTAL
-     .           F1               F2               CHI2"
+     .    Y2                SEP                    F1                F2
+     .             CHI2"
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,
      .            PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
-     .            FMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),EMIN
+     .            FMIN,(1-FMIN),EMIN
        WRITE(27,*) X1MIN,Y1MIN,X2MIN,Y2MIN,
      .            PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
-     .            FMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),EMIN
+     .            FMIN,(1-FMIN),EMIN
        GO TO 9000
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
 C==============================================================
@@ -1532,16 +1570,16 @@ C              3-STAR-FIT
 C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
  9700 WRITE(*,"(a,I4.2)") "Degrees of Freedom = ",
-     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-9
+     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+9
       WRITE(*,*) "Pixel Scale (mas/pix):"
       READ(*,*) PIXSCALE
       WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
       READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
       READ(*,*) Steps
-      WRITE(*,*)  "Step size pixel (goal: accept. rate -> 0.2 - 0.5):"
+      WRITE(*,*)  "Step size pixel (goal: accept. rate -> 0.1 - 0.5):"
       READ(*,*) PSTEP
-      WRITE(*,*)  "Step size flux (goal: accept. rate -> 0.2 - 0.5):"
+      WRITE(*,*)  "Step size flux (goal: accept. rate -> 0.1 - 0.5):"
       READ(*,*) FSTEP
       WRITE(*,*) "Star 1 x,y:"
       READ(*,*) IX10_IN,IY10_IN
@@ -1549,15 +1587,16 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IX20_IN,IY20_IN
       WRITE(*,*) "Star 3 x,y:"
       READ(*,*) IX30_IN,IY30_IN
-      WRITE(*,*) "Star1 Flux Contrib. (star 1/(star1 + star2 + star3)):"
+      WRITE(*,*) "Star 1 Flux Contrib. (star1 / (star1+star2+star3)):"
+      WRITE(*,*) "Choose the BRIGHTEST star!"
       READ(*,*) IF0_IN
-      WRITE(*,*) "Star3 Flux Contrib. (star 3/(star1 + star2 + star3)):"
-      WRITE(*,*) "This should be the FAINTEST star!"
+      WRITE(*,*) "Star 3 Flux Contrib. (star3 / (star1+star2+star3)):"
+      WRITE(*,*) "Choose the FAINTEST star!"
       READ(*,*) IFB0_IN
-      WRITE(24,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A15,A16,A17,A8
-      WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A15,A16,A17,A8
+      WRITE(24,*) A1,A2,A3,A4,A9,A10,A11,A12,A15,A16,A17,A8
+      WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A15,A16,A17,A8
       WRITE(26,*) A18,A19,A20,A21
-      WRITE(27,*) A1,A2,A3,A4,A9,A10,A11,A12,A13,A14,A7,A15,A16,A17,A8
+      WRITE(27,*) A1,A2,A3,A4,A9,A10,A11,A12,A15,A16,A17,A8
       WRITE(*,*) "Fit box:", IXMIN,IXMAX,IYMIN,IYMAX
       WRITE(*,*) "Sky Avg:", SKYBAR
       WRITE(*,*) "Zeropoint Mag:", PSFMAG
@@ -1589,6 +1628,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
      .  + (FB )*USEPSF(IPSTYP, IX-X3, IY-Y3, BRIGHT,
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
         PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
+C        PPU(U) = (DATA(IX,IY)) !raw pixel value only
         U = U + 1
          ENDDO
          ENDDO
@@ -1625,8 +1665,8 @@ C-------------------------------------------------------------
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
       SSEP = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
       SSEP2 = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
-        EE0 = EE0 + EXP(((SSEP-26.50)/(2.50))**2)
-     .  + EXP(((SSEP2-44.00)/(10.00))**2)!SSEP Constraint Here
+C        EE0 = EE0 + EXP(((SSEP-26.50)/(2.50))**2)
+C     .  + EXP(((SSEP2-44.00)/(10.00))**2)!SSEP Constraint Here
         U = 1 
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
@@ -1645,10 +1685,15 @@ C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
          FBMIN = FB
          EMIN = EE0
          ZMIN = Z0
+C      WRITE (25,*) X1MIN, Y1MIN, X2MIN, Y2MIN, X3MIN, Y3MIN,
+C     . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
+C     . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2), FMIN, FBMIN,
+C     . ZMIN, (FMIN*ZMIN), ((1-FMIN)*(ZMIN)), (FBMIN*ZMIN), EMIN
+     
       WRITE (25,*) X1MIN, Y1MIN, X2MIN, Y2MIN, X3MIN, Y3MIN,
      . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
-     . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2), FMIN, FBMIN,
-     . ZMIN, (FMIN*ZMIN), ((1-FMIN)*(ZMIN)), (FBMIN*ZMIN), EMIN
+     . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2), FMIN,
+     . ((1-FMIN-FBMIN)), FBMIN, EMIN
 C--------------------------------------------------------------
 C Begin MCMC LOOP
       DO IT = 1, Steps
@@ -1686,6 +1731,7 @@ C--------------------------------------------------------------
      .        + (FB )*USEPSF(IPSTYP, IX-X3, IY-Y3, BRIGHT,
      .        PAR,PSF,NPSF,NPAR,NEXP,NFRAC,DELTAX,DELTAY,DVDXC,DVDYC)
               PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
+C              PPU(U) = (DATA(IX,IY)) !raw pixel value
               U = U + 1
               ENDDO
               ENDDO
@@ -1712,8 +1758,8 @@ C--------------------------------------------------------------
 C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
       SSEP = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
       SSEP2 = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
-        EEM = EEM + EXP(((SSEP-26.50)/(2.50))**2)
-     .  + EXP(((SSEP2-44.00)/(10.00))**2)!SSEP Constraint Here
+C        EEM = EEM + EXP(((SSEP-26.50)/(2.50))**2) ! Sep Constraint here
+C     .  + EXP(((SSEP2-44.00)/(10.00))**2)
          EEM = EEM/RFAC
         IF (EEM .LT. EMIN) THEN
               X1MIN = X1
@@ -1755,8 +1801,10 @@ C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
         LSSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
         BSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
         ACC_ARRAY = ACC_ARRAY + 1
-        WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
-     .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
+C        WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
+C     .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
+        WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,
+     .  (1-IFM*.001-IFBM*.001),(IFBM*.001),EEM
          U = 1
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
@@ -1782,15 +1830,23 @@ C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
         LSSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
         BSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
         ACC_ARRAY = ACC_ARRAY + 1
-        WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
-     .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
+C        WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
+C     .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
+        WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,
+     .  (1-IFM*.001-IFBM*.001),(IFBM*.001),EEM
       ENDIF
       ENDIF
+C      WRITE(24,*) IX10,IY10,IX20,IY20,IX30,IY30,
+C     . LSSEP,BSEP,IF0*0.001,IFB0*0.001,Z0,
+C     . ((IF0*.001)*(Z0)),((1-IF0*.001)*(Z0)),((IFB0*.001)*(Z0)),EE0
       WRITE(24,*) IX10,IY10,IX20,IY20,IX30,IY30,
-     . LSSEP,BSEP,IF0*0.001,IFB0*0.001,Z0,
-     . ((IF0*.001)*(Z0)),((1-IF0*.001)*(Z0)),((IFB0*.001)*(Z0)),EE0
+     . LSSEP,BSEP,IF0*0.001,
+     . (1-IF0*.001-IFB0*.001),(IFB0*.001),EE0
       IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
       ENDDO !End main MCMC iteration
+       IF (RFAC .EQ. 1.00) WRITE(*,*)
+     . "Renormalization Factor = ",
+     . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+9)
        WRITE(*,*) "Acceptance Rate = ", ACC_ARRAY/Steps
        IF (ACC_ARRAY/Steps .LE. 0.10) WRITE(*,*)
      . "WARNING!! Acceptance rate less than 0.10!"
@@ -1798,18 +1854,27 @@ C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
      . "WARNING!! Acceptance rate larger than 0.50!"
        WRITE(*,*) "      X1               Y1               X2        
      .    Y2               X3               Y3           1-2SEP         
-     .   1-3SEP      S1_F_CONTRIB     S3_F_CONTRIB      F_TOTAL
-     .     F1              F2           F3              CHI2"
+     .   1-3SEP           F1              F2           F3
+     .   CHI2"
+C       WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
+C     . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
+C     . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2),
+C     .       FMIN,FBMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),
+C     .       (FBMIN*ZMIN),EMIN
+C       WRITE(27,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
+C     . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
+C     . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2),
+C     .       FMIN,FBMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),
+C     .       (FBMIN*ZMIN),EMIN
+     
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
      . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
      . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2),
-     .       FMIN,FBMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),
-     .       (FBMIN*ZMIN),EMIN
+     .       FMIN,(1-FMIN-FBMIN), FBMIN, EMIN
        WRITE(27,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
      . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
      . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2),
-     .       FMIN,FBMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),
-     .       (FBMIN*ZMIN),EMIN
+     .       FMIN,(1-FMIN-FBMIN), FBMIN, EMIN
        GO TO 9000
 C------------------------------------
 C----------END OF MCMC-------------------------------------------------
