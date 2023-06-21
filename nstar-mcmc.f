@@ -1020,13 +1020,13 @@ C      GO TO 2000
  9400 CONTINUE 
 C===================================================================================
 C--------------------
-C             MCMC Version 1.5.0 - 2023 April 12
+C             MCMC Version 1.5.1 - 2023 June 20
 C             S.K. Terry
 C
 C Markov chain Monte Carlo routine to fit stellar
 C profiles (one, two, or three stars). Fitting parameters 
 C are star centroids (x_i,y_i), flux
-C ratio (f), and total flux (z).
+C ratio (f_i), and total flux (z).
 C
 C--------------------
 C===================================================================================
@@ -1386,9 +1386,11 @@ C-------------------------------------------------------------
          U = U + 1
          ENDDO
          ENDDO
-C         EE0 = EE0 + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
+C       EE0 = EE0 + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint backup
+
+C      EE0 = EE0 + EXP(((FTOT-38489)/5097)**2)!Flux Constraint here
 C      SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
-C        EE0 = EE0 + EXP(((SSEP-75.0)/(5.73))**2)!SSEP Constraint Here
+C      EE0 = EE0 + EXP(((SSEP-45.0)/(3.73))**2)!SSEP Constraint Here
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
@@ -1463,9 +1465,11 @@ C              PPU(U) = (DATA(IX,IY)) !raw pixel value only
                U = U + 1
            ENDDO
            ENDDO
-C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
-C      SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
-C        EEM = EEM + EXP(((SSEP-75.0)/(5.73))**2)!SSEP Constraint Here
+C        EEM = EEM + EXP(((FU(U)*ZM-6284)/231.565)**2)!Flux Constraint BACKUP
+
+C        EEM = EEM + EXP(((FTOT-38489)/5097)**2)!Flux Constraint here
+C        SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
+C        EEM = EEM + EXP(((SSEP-45.0)/(3.73))**2)!SSEP Constraint Here
          EEM = EEM/RFAC
         IF (EEM .LT. EMIN) THEN
               X1MIN = X1
@@ -1662,9 +1666,9 @@ C-------------------------------------------------------------
          U = U + 1
          ENDDO
          ENDDO
-C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
-      SSEP = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
-      SSEP2 = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
+C         EEM = EEM + EXP(((FTOT-38489)/5097)**2)!Flux Constraint here
+C      SSEP = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
+C      SSEP2 = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
 C        EE0 = EE0 + EXP(((SSEP-26.50)/(2.50))**2)
 C     .  + EXP(((SSEP2-44.00)/(10.00))**2)!SSEP Constraint Here
         U = 1 
@@ -1755,9 +1759,9 @@ C              PPU(U) = (DATA(IX,IY)) !raw pixel value
                U = U + 1
            ENDDO
            ENDDO
-C         EEM = EEM + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint here
-      SSEP = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
-      SSEP2 = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
+C         EEM = EEM + EXP(((FTOT-38489)/5097)**2)!Flux Constraint here
+C      SSEP = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
+C      SSEP2 = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
 C        EEM = EEM + EXP(((SSEP-26.50)/(2.50))**2) ! Sep Constraint here
 C     .  + EXP(((SSEP2-44.00)/(10.00))**2)
          EEM = EEM/RFAC
