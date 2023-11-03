@@ -1020,7 +1020,7 @@ C      GO TO 2000
  9400 CONTINUE 
 C===================================================================================
 C--------------------
-C             MCMC Version 1.5.1 - 2023 June 20
+C             MCMC Version 1.5.1 - 2023 November 2
 C             S.K. Terry
 C
 C Markov chain Monte Carlo routine to fit stellar
@@ -1096,7 +1096,7 @@ C              1-STAR-FIT
 C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
  9500 WRITE(*,"(a,I4.2)") "Degrees of Freedom = ",
-     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+3
+     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-3
       WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
       READ(*,*) RFAC
       WRITE(*,*)  "Number of MCMC Iterations:"
@@ -1307,7 +1307,7 @@ C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  
  9600 WRITE(*,"(a,I4.2)") "Degrees of Freedom =",
-     .((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+6
+     .((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-6
       WRITE(*,*) "Pixel Scale (mas/pix):"
       READ(*,*) PIXSCALE
       WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
@@ -1574,7 +1574,7 @@ C              3-STAR-FIT
 C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
  9700 WRITE(*,"(a,I4.2)") "Degrees of Freedom = ",
-     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+9
+     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-9
       WRITE(*,*) "Pixel Scale (mas/pix):"
       READ(*,*) PIXSCALE
       WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
