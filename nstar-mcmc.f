@@ -1020,7 +1020,7 @@ C      GO TO 2000
  9400 CONTINUE 
 C===================================================================================
 C--------------------
-C             MCMC Version 1.5.1 - 2023 November 2
+C             MCMC Version 1.5.2 - 2023 November 3
 C             S.K. Terry
 C
 C Markov chain Monte Carlo routine to fit stellar
@@ -1067,7 +1067,7 @@ C      IYMAX = 1226
       A21 = "INTENSITY"
       OPEN(24,FILE=MCMCALL,STATUS='UNKNOWN')
       OPEN(25,FILE=MCMCFIL,STATUS='UNKNOWN')
-      OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
+C      OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
       OPEN(27,FILE=BESTFIL,STATUS='UNKNOWN') 
 
       IX10_IN = 0.0
@@ -1240,6 +1240,7 @@ C              PPU(U) = (DATA(IX,IY)) !raw pixel value
         PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
         EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
          U = U + 1
+         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
          WRITE(26,*) IX, IY, EEM_CHI2, DATA(IX,IY)
           ENDDO
           ENDDO
@@ -1253,16 +1254,19 @@ C              PPU(U) = (DATA(IX,IY)) !raw pixel value
         Z0 = ZM
         EE0 = EEM
         ACC_ARRAY = ACC_ARRAY + 1
-C        WRITE(25,*) X1,Y1,ZM,EEM
         WRITE(25,*) X1,Y1,IF0*0.001,EEM
          U = 1
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
          FU_MIN(U) = FU(U)
          PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
+         EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
          U = U + 1
+C         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
+C         WRITE(26,*) IX, IY, EEM_CHI2, DATA(IX,IY)
           ENDDO
           ENDDO
+C         CLOSE(26)
       ELSE
         PROB_RAND = RNARRAY(6)
         PROB = EXP(-(EEM-EE0)/2.00)
@@ -1273,7 +1277,6 @@ C        WRITE(25,*) X1,Y1,ZM,EEM
         Z0 = ZM
         EE0 = EEM
         ACC_ARRAY = ACC_ARRAY + 1
-C        WRITE(25,*) X1,Y1,ZM,EEM
         WRITE(25,*) X1,Y1,IFM*0.001,EEM
       ENDIF
       ENDIF
@@ -1487,10 +1490,11 @@ C        EEM = EEM + EXP(((SSEP-45.0)/(3.73))**2)!SSEP Constraint Here
         PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
         EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
          U = U + 1
+         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
          WRITE(26,*) IX, IY, EEM_CHI2, DATA(IX,IY)
           ENDDO
           ENDDO
-         CLOSE(26)
+        CLOSE(26)
         ELSE
         ENDIF
       IF (EEM .LE. EE0) THEN
@@ -1503,8 +1507,6 @@ C        EEM = EEM + EXP(((SSEP-45.0)/(3.73))**2)!SSEP Constraint Here
         EE0 = EEM
         SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
         ACC_ARRAY = ACC_ARRAY + 1
-C        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,
-C     .  ((IFM*.001)*(ZM)), ((1-IFM*.001)*(ZM)),EEM
         WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,
      .  (1-IFM*.001),EEM
          U = 1
@@ -1512,9 +1514,13 @@ C     .  ((IFM*.001)*(ZM)), ((1-IFM*.001)*(ZM)),EEM
          DO IY=IYMIN,IYMAX
          FU_MIN(U) = FU(U)
          PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
+         EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
          U = U + 1
+C         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
+C         WRITE(26,*) IX, IY, EEM_CHI2, DATA(IX,IY)
           ENDDO
           ENDDO
+C         CLOSE(26)
       ELSE
         PROB_RAND = RNARRAY(6)
         PROB = EXP(-(EEM-EE0)/2.00)
@@ -1528,8 +1534,6 @@ C     .  ((IFM*.001)*(ZM)), ((1-IFM*.001)*(ZM)),EEM
         EE0 = EEM
         SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
         ACC_ARRAY = ACC_ARRAY + 1
-C        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,ZM,
-C     .  ((IFM*.001)*(ZM)), ((1-IFM*.001)*(ZM)),EEM
         WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,
      .  (1-IFM*.001),EEM
         ENDIF
@@ -1785,6 +1789,7 @@ C     .  + EXP(((SSEP2-44.00)/(10.00))**2)
         PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
         EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
          U = U + 1
+         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
          WRITE(26,*) IX, IY, EEM_CHI2, DATA(IX,IY)
           ENDDO
           ENDDO
@@ -1805,8 +1810,6 @@ C     .  + EXP(((SSEP2-44.00)/(10.00))**2)
         LSSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
         BSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
         ACC_ARRAY = ACC_ARRAY + 1
-C        WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
-C     .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
         WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,
      .  (1-IFM*.001-IFBM*.001),(IFBM*.001),EEM
          U = 1
@@ -1814,9 +1817,13 @@ C     .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
          DO IY=IYMIN,IYMAX
          FU_MIN(U) = FU(U)
          PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
+         EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
          U = U + 1
+C         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
+C         WRITE(26,*) IX, IY, EEM_CHI2, DATA(IX,IY)
           ENDDO
           ENDDO
+C         CLOSE(26)
       ELSE
         PROB_RAND = RNARRAY(9)
         PROB = EXP(-(EEM-EE0)/2.00)

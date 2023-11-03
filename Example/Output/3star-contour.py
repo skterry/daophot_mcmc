@@ -21,9 +21,9 @@ chains3 = pd.read_table(fname, usecols=[4,5], sep='\s+', skiprows=1, names=colna
 
 from getdist import plots, MCSamples
 labels = ['\\mathrm{X}', '\\mathrm{Y}']
-samples1 = MCSamples(samples=chains1[['X1_CENTER', 'Y1_CENTER']].values, names=colname, labels=labels, ignore_rows=0.1)
-samples2 = MCSamples(samples=chains2[['X2_CENTER', 'Y2_CENTER']].values, names=colname, labels=labels, ignore_rows=0.1)
-samples3 = MCSamples(samples=chains3[['X3_CENTER', 'Y3_CENTER']].values, names=colname, labels=labels, ignore_rows=0.1)
+samples1 = MCSamples(samples=chains1[['X1_CENTER', 'Y1_CENTER']].values, names=colname1, labels=labels, ignore_rows=0.1)
+samples2 = MCSamples(samples=chains2[['X2_CENTER', 'Y2_CENTER']].values, names=colname2, labels=labels, ignore_rows=0.1)
+samples3 = MCSamples(samples=chains3[['X3_CENTER', 'Y3_CENTER']].values, names=colname3, labels=labels, ignore_rows=0.1)
 
 conf = [0.683, 0.955, 0.997]
 samples1.updateSettings({'contours': conf})
