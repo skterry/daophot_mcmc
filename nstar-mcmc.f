@@ -1476,7 +1476,7 @@ C--------------------------------------------------------------
      . "WARNING: Chain did not converge within Steps iterations."
        IF (RFAC .EQ. 1.00) WRITE(*,*)
      . "Renormalization Factor = ",
-     . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+3)
+     . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-3)
        WRITE(*,*) "Acceptance Rate (cold chain) = ", ACC_ARRAY/IT
        IF (ACC_ARRAY/IT .LE. 0.10) WRITE(*,*)
      . "WARNING!! Acceptance rate less than 0.10!"
@@ -1859,7 +1859,7 @@ C--------------------------------------------------------------
      . "WARNING: Chain did not converge within Steps iterations."
        IF (RFAC .EQ. 1.00) WRITE(*,*)
      . "Renormalization Factor = ",
-     . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+6)
+     . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-6)
        WRITE(*,*) "Acceptance Rate (cold chain) = ", ACC_ARRAY/IT
        IF (ACC_ARRAY/IT .LE. 0.10) WRITE(*,*)
      . "WARNING!! Acceptance rate less than 0.10!"
@@ -2325,7 +2325,7 @@ C--------------------------------------------------------------
      . "WARNING: Chain did not converge within Steps iterations."
        IF (RFAC .EQ. 1.00) WRITE(*,*)
      . "Renormalization Factor = ",
-     . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+9)
+     . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-9)
        WRITE(*,*) "Acceptance Rate (cold chain) = ", ACC_ARRAY/IT
        IF (ACC_ARRAY/IT .LE. 0.10) WRITE(*,*)
      . "WARNING!! Acceptance rate less than 0.10!"
