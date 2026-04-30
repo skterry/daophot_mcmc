@@ -36,6 +36,12 @@ if starNum == 3:
 	print("Star 2/(Star 1+2+3) ratio:", s2_total_fratio)
 	print("Star 3/(Star 1+2+3) ratio:", s3_total_fratio)
 
+	#Calculate Total magnitudes for fun:
+	s1_s2_s3_totmag = -2.5*np.log10((10**(-0.4*s1))+(((10**(-0.4*s2))))+(10**(-0.4*s3)))
+
+	print("-----------------------------------")
+	print("Combined Magnitude:", s1_s2_s3_totmag)
+
 elif starNum == 2:
 	s1 = float(input("Star 1 Mag : "))
 	s2 = float(input("Star 2 Mag : "))
@@ -51,6 +57,12 @@ elif starNum == 2:
 	print("-----------------------------------")
 	print("Star 1/(Star 1+2) ratio:", s1_total_fratio)
 	print("Star 2/(Star 1+2) ratio:", s2_total_fratio)
+
+	#Calculate Total magnitudes for fun:
+	s1_s2_totmag = -2.5*np.log10((10**(-0.4*s1))+(((10**(-0.4*s2)))))
+
+	print("-----------------------------------")
+	print("Combined Magnitude:", s1_s2_totmag)
 
 else:
 	print("Please type 2 or 3")

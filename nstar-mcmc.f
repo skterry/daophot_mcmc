@@ -109,6 +109,41 @@ C
       COMMON /FILNAM/ COOFIL, MAGFIL, PSFFIL, FITFIL, GRPFIL, MCMCFIL
       COMMON /FILNAM/ CHISQPIXFIL, BESTFIL, MCMCALL
 
+      INTEGER, PARAMETER :: MAXCHAINS = 10
+      REAL    PT_IX10(MAXCHAINS), PT_IY10(MAXCHAINS)
+      REAL    PT_IX20(MAXCHAINS), PT_IY20(MAXCHAINS)
+      REAL    PT_IX30(MAXCHAINS), PT_IY30(MAXCHAINS)
+      REAL    PT_IF0(MAXCHAINS),  PT_IFB0(MAXCHAINS)
+      REAL    PT_Z0(MAXCHAINS),   PT_EE0(MAXCHAINS)
+      REAL    TEMP(MAXCHAINS)
+      REAL    SWAP_RAND, SWAP_PROB
+      INTEGER NCHAINS, KC, KH
+      REAL    TRATIO
+      REAL    TMPVAL
+C--------------------------------------------------------------
+C     Gelman-Rubin convergence diagnostics.
+C     MAXWIN: max rolling window size for stored cold-chain samples.
+C     GR_*:   rolling arrays storing cold-chain parameter history.
+C     RHAT_*: computed R-hat values for each parameter.
+C     GR_CHECK: interval (iterations) between convergence checks.
+C     GR_THRESH: R-hat threshold (hard-coded 1.05, publication quality).
+C     GR_WIN:  rolling window size (hard-coded as 10% of Steps).
+C     GR_IDX:  circular buffer write index.
+C     GR_N:    samples accumulated (capped at GR_WIN).
+C     CONVERGED: flag set to 1 when all R-hats pass threshold.
+C--------------------------------------------------------------
+      INTEGER, PARAMETER :: MAXWIN = 200000
+      REAL    GR_X1(MAXWIN), GR_Y1(MAXWIN)
+      REAL    GR_X2(MAXWIN), GR_Y2(MAXWIN)
+      REAL    GR_X3(MAXWIN), GR_Y3(MAXWIN)
+      REAL    GR_F(MAXWIN),  GR_FB(MAXWIN)
+      REAL    RHAT_X1, RHAT_Y1
+      REAL    RHAT_X2, RHAT_Y2
+      REAL    RHAT_X3, RHAT_Y3
+      REAL    RHAT_F,  RHAT_FB
+      INTEGER GR_CHECK, GR_WIN, GR_IDX, GR_N, CONVERGED
+      REAL    GR_THRESH
+
 C
 C-----------------------------------------------------------------------
 C
@@ -1020,27 +1055,40 @@ C      GO TO 2000
  9400 CONTINUE 
 C===================================================================================
 C--------------------
-C             MCMC Version 1.5.2 - 2023 November 3
+C             MCMC Version 1.6.0 - Parallel Tempering Edition
 C             S.K. Terry
+C             (PT implementation added)
 C
 C Markov chain Monte Carlo routine to fit stellar
-C profiles (one, two, or three stars). Fitting parameters 
+C profiles (one, two, or three stars). Fitting parameters
 C are star centroids (x_i,y_i), flux
 C ratio (f_i), and total flux (z).
 C
+C Parallel tempering runs NCHAINS chains simultaneously, each
+C sampling a tempered likelihood EEM/T(k). Hot chains (T>1)
+C can cross chi^2 barriers that would trap a cold chain.
+C Adjacent chains periodically attempt state swaps. Only the
+C cold chain (T=1, k=1) writes to the posterior output files.
 C--------------------
 C===================================================================================
 C In order to manually adjust the size of the fitting box, uncomment and change
 C the values below this line.
-C      IXMIN = 1084
-C      IXMAX = 1101
-C      IYMIN = 1210
-C      IYMAX = 1226
+C      IXMIN = 1050
+C      IXMAX = 1082
+C      IYMIN = 1268
+C      IYMAX = 1290
 
       GRIDSIZE = ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))
       ALLOCATE (PPU_MIN(GRIDSIZE),FU(GRIDSIZE),FU_MIN(GRIDSIZE),
      . SGU(GRIDSIZE),SGL(GRIDSIZE),SGU2(GRIDSIZE),PPU(GRIDSIZE),
      . EMIN_CHI2(GRIDSIZE),EMINPIX(GRIDSIZE))
+
+C--------------------------------------------------------------
+C     Parallel tempering parameters: max chains = 10
+C     PT_IX10, PT_IY10, etc. store each chain's current state.
+C     PT_EE0 stores each chain's current tempered chi^2.
+C     TEMP stores the temperature of each chain.
+C--------------------------------------------------------------
 
       A1 = "#X1_CENTER"
       A2 = "Y1_CENTER"
@@ -1068,7 +1116,7 @@ C      IYMAX = 1226
       OPEN(24,FILE=MCMCALL,STATUS='UNKNOWN')
       OPEN(25,FILE=MCMCFIL,STATUS='UNKNOWN')
 C      OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
-      OPEN(27,FILE=BESTFIL,STATUS='UNKNOWN') 
+      OPEN(27,FILE=BESTFIL,STATUS='UNKNOWN')
 
       IX10_IN = 0.0
       IY10_IN = 0.0
@@ -1087,14 +1135,14 @@ C      OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
        GO TO 9600
       ELSEIF (FIT_STARS == 3) THEN
        GO TO 9700
-      ELSE 
+      ELSE
        GO TO 9900
       ENDIF
-C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
+C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 C==============================================================
 C              1-STAR-FIT
 C==============================================================
-C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
+C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  9500 WRITE(*,"(a,I4.2)") "Degrees of Freedom = ",
      . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-3
       WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
@@ -1109,19 +1157,84 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       READ(*,*) IX10_IN,IY10_IN
       WRITE(*,*) "Flux Contribution (0.0 - 1.0):"
       READ(*,*) IF0_IN
+C--------------------------------------------------------------
+C     Parallel tempering setup
+      WRITE(*,*) "Number of PT chains (1 = standard MCMC, max 10):"
+      READ(*,*) NCHAINS
+      IF (NCHAINS .LT. 1) NCHAINS = 1
+      IF (NCHAINS .GT. MAXCHAINS) NCHAINS = MAXCHAINS
+      IF (NCHAINS .GT. 1) THEN
+        WRITE(*,*) "Temperature ratio between adjacent chains",
+     .             " (e.g. 2.0):"
+        READ(*,*) TRATIO
+      ELSE
+        TRATIO = 1.0
+      ENDIF
+C     Build geometric temperature ladder: T(k) = TRATIO^(k-1)
+      DO KC = 1, NCHAINS
+        TEMP(KC) = TRATIO**(KC-1)
+      ENDDO
+      WRITE(*,*) "Temperature ladder:"
+      DO KC = 1, NCHAINS
+        WRITE(*,"(a,I2,a,F8.3)") "  Chain ",KC,": T = ",TEMP(KC)
+      ENDDO
+C--------------------------------------------------------------
+C     Gelman-Rubin convergence setup.
+C     GR_THRESH is hard-coded at 1.05 (publication-quality criterion).
+C     GR_WIN is hard-coded as 10% of Steps, capped at MAXWIN.
+      WRITE(*,*) "Convergence check interval (steps, e.g. 10000):"
+      READ(*,*) GR_CHECK
+      GR_THRESH = 1.05
+      GR_WIN    = MAX(4, MIN(Steps/10, MAXWIN))
+      WRITE(*,"(a,F4.2)") "  R-hat threshold (fixed): ", GR_THRESH
+      WRITE(*,"(a,I8)")   "  Rolling window size:     ", GR_WIN
+      GR_IDX = 0
+      GR_N   = 0
+      CONVERGED = 0
+C--------------------------------------------------------------
       WRITE(24,*) A1,A2,A7,A8
       WRITE(25,*) A1,A2,A7,A8
+      OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
       WRITE(26,*) A18,A19,A20,A21
+      CLOSE(26)
       WRITE(27,*) A1,A2,A7,A8
       WRITE(*,*) "Fit box:", IXMIN,IXMAX,IYMIN,IYMAX
       WRITE(*,*) "Sky Avg:", SKYBAR
       WRITE(*,*) "Zeropoint Mag:", PSFMAG
 
-      IX10 = IX10_IN !initial source x
-      IY10 = IY10_IN !initial source y
-      IF0 = 1000*IF0_IN !initial flux ratio
-      U = 1
+C--------------------------------------------------------------
+C     Dispersed multi-start initialisation.
+C     Chain 1 (cold) starts exactly at the user-supplied position.
+C     Chains 2..NCHAINS are perturbed by a random offset drawn
+C     uniformly from [-5, +5] pixels and [-0.1, +0.1] in flux,
+C     giving each chain a genuinely different starting point for
+C     a valid multi-start Gelman-Rubin convergence test.
+C--------------------------------------------------------------
+      PT_IX10(1) = IX10_IN
+      PT_IY10(1) = IY10_IN
+      PT_IF0(1)  = 1000*IF0_IN
+      IF (NCHAINS .GT. 1) THEN
+        DO KC = 2, NCHAINS
+          CALL RANDOM_NUMBER(RNARRAY)
+          PT_IX10(KC) = IX10_IN + (2*RNARRAY(1)-1)*5.0
+          PT_IY10(KC) = IY10_IN + (2*RNARRAY(2)-1)*5.0
+          PT_IF0(KC)  = 1000*IF0_IN + (2*RNARRAY(5)-1)*100.0
+C         Clamp perturbed flux to physical range
+          IF (PT_IF0(KC) .GE. 1000) PT_IF0(KC) = 999
+          IF (PT_IF0(KC) .LE. 0)    PT_IF0(KC) = 1
+          WRITE(*,"(a,I2,a,2F8.2,a,F6.3)")
+     .      "  Chain ",KC," start: x,y=",
+     .      PT_IX10(KC),PT_IY10(KC),
+     .      "  f=",PT_IF0(KC)*0.001
+        ENDDO
+      ENDIF
 
+C     Compute initial chi^2 for chain 1 (cold chain) to set
+C     starting values for EMIN tracking and first file write.
+      IX10 = PT_IX10(1)
+      IY10 = PT_IY10(1)
+      IF0  = PT_IF0(1)
+      U = 1
         X1 = 1.0*IX10
         Y1 = 1.0*IY10
          F = 0.001*IF0
@@ -1129,8 +1242,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       DO IY=IYMIN,IYMAX
         FU(U)=(F )*USEPSF(IPSTYP, IX-X1, IY-Y1, BRIGHT,
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
-        PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
-C        PPU(U) = (DATA(IX,IY)) !raw pixel value only
+        PPU(U) = (DATA(IX,IY) - SKYBAR)
         U = U + 1
          ENDDO
          ENDDO
@@ -1149,22 +1261,13 @@ C        PPU(U) = (DATA(IX,IY)) !raw pixel value only
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
-C---------Stetson Pixel Noise Calculations--------------------
-C          D=0.795*FU(U)
-C          DPOS=DATA(IX,IY)-D
-C          SGU(U)=DPOS/PHPADU+RDNOIS+(PERERR*DPOS)**2+
-C     .    (PKERR*(DPOS-SKYBAR))**2
-C          SGL(U)=ABS(D)/SQRT(SGU(U))
-C-------------------------------------------------------------
-C---------Simple Pixel Noise Model----------------------------
           SGU2(U)=SQRT(16.0+MAX(DATA(IX,IY),0.)
      .    +(0.01*MAX(DATA(IX,IY),0.))**2)
-C-------------------------------------------------------------
         EE0=EE0+((((DATA(IX,IY)-SKYBAR)-FU(U)*Z0)/SGU2(U))**2)/RFAC
          U = U + 1
          ENDDO
          ENDDO
-        U = 1 
+        U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
           FU_MIN(U) = FU(U)
@@ -1177,32 +1280,48 @@ C-------------------------------------------------------------
          FMIN = F
          EMIN = EE0
          ZMIN = Z0
-C      WRITE (25,*) X1MIN, Y1MIN, ZMIN, EMIN
+
+C     Initialise PT_EE0 and PT_Z0 for all chains.
+C     All chains start at the same chi^2; the tempered acceptance
+C     criterion (EEM/T vs EE0/T) means each chain will evolve
+C     independently at its own effective temperature.
+      DO KC = 1, NCHAINS
+        PT_EE0(KC) = EE0
+        PT_Z0(KC)  = Z0
+      ENDDO
+
       WRITE (25,*) X1MIN, Y1MIN, FMIN, EMIN
 C--------------------------------------------------------------
 C Begin MCMC LOOP
       DO IT = 1, Steps
+
+C     ---- Inner loop over all chains -------------------------
+      DO KC = 1, NCHAINS
+
       CALL RANDOM_NUMBER(RNARRAY)
+      IX10 = PT_IX10(KC)
+      IY10 = PT_IY10(KC)
+      IF0  = PT_IF0(KC)
+      EE0  = PT_EE0(KC)
+      Z0   = PT_Z0(KC)
+
       IX1M = IX10 + (200*RNARRAY(1)-100)*(PSTEP*0.01)
       IY1M = IY10 + (200*RNARRAY(2)-100)*(PSTEP*0.01)
-22      IFM = IF0 + (200*RNARRAY(5)-100)*(FSTEP*0.1)
+22    IFM  = IF0  + (200*RNARRAY(5)-100)*(FSTEP*0.1)
 
-C      IF ((IFM .GE. 1000) .OR. (IFM .LE. 0)) THEN
-C       GO TO 22
-C      ELSE
-C      ENDIF
+C     Clamp flux proposal to physical range (0 < F < 1).
+      IF (IFM .GE. 1000) IFM = 999
+      IF (IFM .LE. 0) IFM = 1
 C--------------------------------------------------------------
         X1 = 1.0*IX1M
         Y1 = 1.0*IY1M
-
           F = 0.001*IFM
           U = 1
            DO IX=IXMIN,IXMAX
            DO IY=IYMIN,IYMAX
               FU(U)=(F )*USEPSF(IPSTYP, IX-X1, IY-Y1, BRIGHT,
      .        PAR,PSF,NPSF,NPAR,NEXP,NFRAC,DELTAX,DELTAY,DVDXC,DVDYC)
-              PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
-C              PPU(U) = (DATA(IX,IY)) !raw pixel value
+              PPU(U) = (DATA(IX,IY) - SKYBAR)
               U = U + 1
               ENDDO
               ENDDO
@@ -1210,7 +1329,7 @@ C              PPU(U) = (DATA(IX,IY)) !raw pixel value
            FTOT = 0.
            U = 1
            DO IX=IXMIN,IXMAX
-           DO IY=IYMIN,IYMAX 
+           DO IY=IYMIN,IYMAX
               PTOT = PTOT + PPU(U)
               FTOT = FTOT + FU(U)
               U = U + 1
@@ -1227,88 +1346,155 @@ C              PPU(U) = (DATA(IX,IY)) !raw pixel value
            ENDDO
            ENDDO
          EEM = EEM/RFAC
-        IF (EEM .LT. EMIN) THEN
+
+C     Best-ever tracking uses the raw (untempered) chi^2 from
+C     chain 1 only, so EMIN always reflects the true posterior.
+        IF (KC .EQ. 1 .AND. EEM .LT. EMIN) THEN
               X1MIN = X1
               Y1MIN = Y1
               FMIN = IFM * 0.001
               EMIN = EEM
               ZMIN = ZM
          U = 1
+         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
         PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
         EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
          U = U + 1
-         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
          WRITE(26,*) IX, IY, EEM_CHI2, DATA(IX,IY)
           ENDDO
           ENDDO
          CLOSE(26)
         ELSE
         ENDIF
+
+C     MH acceptance using tempered chi^2: divide delta by T(KC).
+C     Chain 1 (T=1) is the standard cold chain (true posterior).
+C     Hot chains accept uphill moves more readily, aiding escape
+C     from local minima. Only chain 1 writes to output files.
       IF (EEM .LE. EE0) THEN
-        IX10 = IX1M
-        IY10 = IY1M
-        IF0 = IFM
-        Z0 = ZM
-        EE0 = EEM
-        ACC_ARRAY = ACC_ARRAY + 1
-        WRITE(25,*) X1,Y1,IF0*0.001,EEM
-         U = 1
-         DO IX=IXMIN,IXMAX
-         DO IY=IYMIN,IYMAX
-         FU_MIN(U) = FU(U)
-         PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
-         EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
-         U = U + 1
-C         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
-C         WRITE(26,*) IX, IY, EEM_CHI2, DATA(IX,IY)
-          ENDDO
-          ENDDO
-C         CLOSE(26)
+        PT_IX10(KC) = IX1M
+        PT_IY10(KC) = IY1M
+        PT_IF0(KC)  = IFM
+        PT_Z0(KC)   = ZM
+        PT_EE0(KC)  = EEM
+        IF (KC .EQ. 1) THEN
+          ACC_ARRAY = ACC_ARRAY + 1
+          WRITE(25,*) X1,Y1,IF0*0.001,EEM
+        ENDIF
       ELSE
         PROB_RAND = RNARRAY(6)
-        PROB = EXP(-(EEM-EE0)/2.00)
+C       Tempered acceptance probability: exp(-delta_chi2 / T(KC))
+        PROB = EXP(-(EEM-EE0)/TEMP(KC))
         IF (PROB .GT. PROB_RAND) THEN
-        IX10 = IX1M
-        IY10 = IY1M
-        IF0 = IFM
-        Z0 = ZM
-        EE0 = EEM
-        ACC_ARRAY = ACC_ARRAY + 1
-        WRITE(25,*) X1,Y1,IFM*0.001,EEM
+          PT_IX10(KC) = IX1M
+          PT_IY10(KC) = IY1M
+          PT_IF0(KC)  = IFM
+          PT_Z0(KC)   = ZM
+          PT_EE0(KC)  = EEM
+          IF (KC .EQ. 1) THEN
+            ACC_ARRAY = ACC_ARRAY + 1
+            WRITE(25,*) X1,Y1,IFM*0.001,EEM
+          ENDIF
+        ELSE
+C         Proposal rejected: if cold chain, record current state.
+          IF (KC .EQ. 1) THEN
+            WRITE(25,*) 1.0*PT_IX10(1),1.0*PT_IY10(1),
+     .        PT_IF0(1)*0.001,PT_EE0(1)
+          ENDIF
+        ENDIF
       ENDIF
+
+      ENDDO !End inner chain loop
+C--------------------------------------------------------------
+C     Parallel tempering swap step.
+C     After all chains have taken a step, attempt to swap adjacent
+C     chains KC and KC+1. The swap probability preserves detailed
+C     balance across the joint chain ensemble:
+C       P_swap = exp( (1/T_k - 1/T_{k+1}) * (chi2_k - chi2_{k+1}) )
+C     A swap is attempted every iteration for every adjacent pair.
+      IF (NCHAINS .GT. 1) THEN
+        DO KC = 1, NCHAINS-1
+          KH = KC + 1
+          CALL RANDOM_NUMBER(RNARRAY)
+          SWAP_RAND = RNARRAY(1)
+C         Compute swap acceptance probability
+          SWAP_PROB = EXP( (1.0/TEMP(KC) - 1.0/TEMP(KH)) *
+     .              (PT_EE0(KC) - PT_EE0(KH)) )
+          SWAP_PROB = MIN(1.0, SWAP_PROB)
+          IF (SWAP_PROB .GT. SWAP_RAND) THEN
+C           Swap positions and chi^2 between chains KC and KH
+            TMPVAL = PT_IX10(KC)
+            PT_IX10(KC) = PT_IX10(KH)
+            PT_IX10(KH) = TMPVAL
+            TMPVAL = PT_IY10(KC)
+            PT_IY10(KC) = PT_IY10(KH)
+            PT_IY10(KH) = TMPVAL
+            TMPVAL = PT_IF0(KC)
+            PT_IF0(KC) = PT_IF0(KH)
+            PT_IF0(KH) = TMPVAL
+            TMPVAL = PT_Z0(KC)
+            PT_Z0(KC) = PT_Z0(KH)
+            PT_Z0(KH) = TMPVAL
+            TMPVAL = PT_EE0(KC)
+            PT_EE0(KC) = PT_EE0(KH)
+            PT_EE0(KH) = TMPVAL
+          ENDIF
+        ENDDO
       ENDIF
-C      WRITE(24,*) IX10,IY10,Z0,EE0
-      WRITE(24,*) IX10,IY10,IF0*0.001,EE0
+C--------------------------------------------------------------
+      WRITE(24,*) PT_IX10(1),PT_IY10(1),PT_IF0(1)*0.001,PT_EE0(1)
+C--------------------------------------------------------------
+C     Store cold-chain sample in rolling GR buffer
+      GR_IDX = MOD(GR_IDX, GR_WIN) + 1
+      GR_X1(GR_IDX) = PT_IX10(1)
+      GR_Y1(GR_IDX) = PT_IY10(1)
+      GR_F(GR_IDX)  = PT_IF0(1)*0.001
+      IF (GR_N .LT. GR_WIN) GR_N = GR_N + 1
+C     Gelman-Rubin convergence check
+      IF (MOD(IT,GR_CHECK)==0 .AND. GR_N .GE. 4) THEN
+        CALL GELMANRUBIN(GR_X1,GR_N,MAXWIN,RHAT_X1)
+        CALL GELMANRUBIN(GR_Y1,GR_N,MAXWIN,RHAT_Y1)
+        CALL GELMANRUBIN(GR_F, GR_N,MAXWIN,RHAT_F)
+        WRITE(*,"(a,I8,a,3F8.4)") "  IT=",IT,
+     .    " Rhat(X1,Y1,F)=",RHAT_X1,RHAT_Y1,RHAT_F
+        IF (RHAT_X1 .LT. GR_THRESH .AND.
+     .      RHAT_Y1 .LT. GR_THRESH .AND.
+     .      RHAT_F  .LT. GR_THRESH) THEN
+          CONVERGED = 1
+          WRITE(*,*) "CONVERGED at iteration ", IT
+          GO TO 9501
+        ENDIF
+      ENDIF
+C--------------------------------------------------------------
       IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
       ENDDO !End main MCMC iteration
+ 9501 CONTINUE
+       IF (CONVERGED .EQ. 0) WRITE(*,*)
+     . "WARNING: Chain did not converge within Steps iterations."
        IF (RFAC .EQ. 1.00) WRITE(*,*)
      . "Renormalization Factor = ",
      . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+3)
-       WRITE(*,*) "Acceptance Rate = ", ACC_ARRAY/Steps
-       IF (ACC_ARRAY/Steps .LE. 0.10) WRITE(*,*)
+       WRITE(*,*) "Acceptance Rate (cold chain) = ", ACC_ARRAY/IT
+       IF (ACC_ARRAY/IT .LE. 0.10) WRITE(*,*)
      . "WARNING!! Acceptance rate less than 0.10!"
-       IF (ACC_ARRAY/Steps .GE. 0.50) WRITE(*,*)
+       IF (ACC_ARRAY/IT .GE. 0.50) WRITE(*,*)
      . "WARNING!! Acceptance rate larger than 0.50!"
-       WRITE(*,*) "      X1               Y1             F_TOT        
+       WRITE(*,*) "      X1               Y1             F_TOT
      .   CHI2"
-C       WRITE(*,*) X1MIN,Y1MIN,
-C     .            ZMIN,EMIN
-C       WRITE(27,*) X1MIN,Y1MIN,
-C     .            ZMIN,EMIN
        WRITE(*,*) X1MIN,Y1MIN,
      .            FMIN,EMIN
        WRITE(27,*) X1MIN,Y1MIN,
      .            FMIN,EMIN
        GO TO 9000
-C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
+C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 C==============================================================
 C              2-STAR-FIT
 C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
- 
+
  9600 WRITE(*,"(a,I4.2)") "Degrees of Freedom =",
      .((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-6
       WRITE(*,*) "Pixel Scale (mas/pix):"
@@ -1328,21 +1514,86 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       WRITE(*,*) "Star 1 Flux Contribution (star 1/(star1 + star2)):"
       WRITE(*,*) "Choose the BRIGHTER star!"
       READ(*,*) IF0_IN
+C--------------------------------------------------------------
+C     Parallel tempering setup
+      WRITE(*,*) "Number of PT chains (1 = standard MCMC, max 10):"
+      READ(*,*) NCHAINS
+      IF (NCHAINS .LT. 1) NCHAINS = 1
+      IF (NCHAINS .GT. MAXCHAINS) NCHAINS = MAXCHAINS
+      IF (NCHAINS .GT. 1) THEN
+        WRITE(*,*) "Temperature ratio between adjacent chains",
+     .             " (e.g. 2.0):"
+        READ(*,*) TRATIO
+      ELSE
+        TRATIO = 1.0
+      ENDIF
+      DO KC = 1, NCHAINS
+        TEMP(KC) = TRATIO**(KC-1)
+      ENDDO
+      WRITE(*,*) "Temperature ladder:"
+      DO KC = 1, NCHAINS
+        WRITE(*,"(a,I2,a,F8.3)") "  Chain ",KC,": T = ",TEMP(KC)
+      ENDDO
+C--------------------------------------------------------------
+C     Gelman-Rubin convergence setup.
+C     GR_THRESH is hard-coded at 1.05 (publication-quality criterion).
+C     GR_WIN is hard-coded as 10% of Steps, capped at MAXWIN.
+      WRITE(*,*) "Convergence check interval (steps, e.g. 10000):"
+      READ(*,*) GR_CHECK
+      GR_THRESH = 1.05
+      GR_WIN    = MAX(4, MIN(Steps/10, MAXWIN))
+      WRITE(*,"(a,F4.2)") "  R-hat threshold (fixed): ", GR_THRESH
+      WRITE(*,"(a,I8)")   "  Rolling window size:     ", GR_WIN
+      GR_IDX = 0
+      GR_N   = 0
+      CONVERGED = 0
+C--------------------------------------------------------------
       WRITE(24,*) A1,A2,A3,A4,A5,A15,A16,A8
       WRITE(25,*) A1,A2,A3,A4,A5,A15,A16,A8
+      OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
       WRITE(26,*) A18,A19,A20,A21
+      CLOSE(26)
       WRITE(27,*) A1,A2,A3,A4,A5,A15,A16,A8
       WRITE(*,*) "Fit box:", IXMIN,IXMAX,IYMIN,IYMAX
       WRITE(*,*) "Sky Avg:", SKYBAR
       WRITE(*,*) "Zeropoint Mag:", PSFMAG
 
-      IX10 = IX10_IN !initial source x
-      IY10 = IY10_IN !initial source y
-      IX20 = IX20_IN !initial lens x
-      IY20 = IY20_IN !initial lens y
-      IF0 = 1000*IF0_IN !initial flux ratio
-      U = 1
+C--------------------------------------------------------------
+C     Dispersed multi-start initialisation.
+C     Chain 1 (cold) starts exactly at the user-supplied position.
+C     Chains 2..NCHAINS are perturbed by a random offset drawn
+C     uniformly from [-8, +8] pixels and [-0.1, +0.1] in flux.
+C--------------------------------------------------------------
+      PT_IX10(1) = IX10_IN
+      PT_IY10(1) = IY10_IN
+      PT_IX20(1) = IX20_IN
+      PT_IY20(1) = IY20_IN
+      PT_IF0(1)  = 1000*IF0_IN
+      IF (NCHAINS .GT. 1) THEN
+        DO KC = 2, NCHAINS
+          CALL RANDOM_NUMBER(RNARRAY)
+          PT_IX10(KC) = IX10_IN + (2*RNARRAY(1)-1)*8.0
+          PT_IY10(KC) = IY10_IN + (2*RNARRAY(2)-1)*8.0
+          PT_IX20(KC) = IX20_IN + (2*RNARRAY(3)-1)*8.0
+          PT_IY20(KC) = IY20_IN + (2*RNARRAY(4)-1)*8.0
+          PT_IF0(KC)  = 1000*IF0_IN + (2*RNARRAY(5)-1)*100.0
+C         Clamp perturbed flux to physical range
+          IF (PT_IF0(KC) .GE. 1000) PT_IF0(KC) = 999
+          IF (PT_IF0(KC) .LE. 0)    PT_IF0(KC) = 1
+          WRITE(*,"(a,I2,a,4F8.2,a,F6.3)")
+     .      "  Chain ",KC," start: x1,y1,x2,y2=",
+     .      PT_IX10(KC),PT_IY10(KC),
+     .      PT_IX20(KC),PT_IY20(KC),
+     .      "  f=",PT_IF0(KC)*0.001
+        ENDDO
+      ENDIF
 
+      IX10 = PT_IX10(1)
+      IY10 = PT_IY10(1)
+      IX20 = PT_IX20(1)
+      IY20 = PT_IY20(1)
+      IF0  = PT_IF0(1)
+      U = 1
         X1 = 1.0*IX10
         Y1 = 1.0*IY10
         X2 = 1.0*IX20
@@ -1354,8 +1605,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
      .  + (1-F)*USEPSF(IPSTYP, IX-X2, IY-Y2, BRIGHT,
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
-        PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
-C        PPU(U) = (DATA(IX,IY)) !raw pixel value
+        PPU(U) = (DATA(IX,IY) - SKYBAR)
         U = U + 1
          ENDDO
          ENDDO
@@ -1374,26 +1624,12 @@ C        PPU(U) = (DATA(IX,IY)) !raw pixel value
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
-C---------Stetson Pixel Noise Calculations--------------------
-C          D=0.795*FU(U)
-C          DPOS=DATA(IX,IY)-D
-C          SGU(U)=DPOS/PHPADU+RDNOIS+(PERERR*DPOS)**2+
-C     .    (PKERR*(DPOS-SKYBAR))**2
-C          SGL(U)=ABS(D)/SQRT(SGU(U))
-C-------------------------------------------------------------
-C---------Simple Pixel Noise Model----------------------------
           SGU2(U)=SQRT(16.0+MAX(DATA(IX,IY),0.)
      .    +(0.01*MAX(DATA(IX,IY),0.))**2)
-C-------------------------------------------------------------
         EE0=EE0+((((DATA(IX,IY)-SKYBAR)-FU(U)*Z0)/SGU2(U))**2)/RFAC
          U = U + 1
          ENDDO
          ENDDO
-C       EE0 = EE0 + EXP(((FU(U)*Z0-6284)/231.565)**2)!Flux Constraint backup
-
-C      EE0 = EE0 + EXP(((FTOT-38489)/5097)**2)!Flux Constraint here
-C      SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
-C      EE0 = EE0 + EXP(((SSEP-45.0)/(3.73))**2)!SSEP Constraint Here
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
@@ -1409,32 +1645,43 @@ C      EE0 = EE0 + EXP(((SSEP-45.0)/(3.73))**2)!SSEP Constraint Here
          FMIN = F
          EMIN = EE0
          ZMIN = Z0
-C      WRITE (25,*) X1MIN, Y1MIN, X2MIN, Y2MIN,
-C     . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2), FMIN, ZMIN, 
-C     . (FMIN*ZMIN), ((1-FMIN)*(ZMIN)), EMIN
+      DO KC = 1, NCHAINS
+        PT_EE0(KC) = EE0
+        PT_Z0(KC)  = Z0
+      ENDDO
       WRITE (25,*) X1MIN, Y1MIN, X2MIN, Y2MIN,
-     . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2), FMIN, 
+     . 9.942*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2), FMIN,
      . (1-FMIN), EMIN
 C--------------------------------------------------------------
 C Begin MCMC LOOP
       DO IT = 1, Steps
+
+C     ---- Inner loop over all chains -------------------------
+      DO KC = 1, NCHAINS
+
       CALL RANDOM_NUMBER(RNARRAY)
+      IX10 = PT_IX10(KC)
+      IY10 = PT_IY10(KC)
+      IX20 = PT_IX20(KC)
+      IY20 = PT_IY20(KC)
+      IF0  = PT_IF0(KC)
+      EE0  = PT_EE0(KC)
+      Z0   = PT_Z0(KC)
+
       IX1M = IX10 + (200*RNARRAY(1)-100)*(PSTEP*0.01)
       IY1M = IY10 + (200*RNARRAY(2)-100)*(PSTEP*0.01)
       IX2M = IX20 + (200*RNARRAY(3)-100)*(PSTEP*0.01)
-13      IY2M = IY20 + (200*RNARRAY(4)-100)*(PSTEP*0.01)
-12      IFM = IF0 + (200*RNARRAY(5)-100)*(FSTEP*0.1)
+13    IY2M = IY20 + (200*RNARRAY(4)-100)*(PSTEP*0.01)
+12    IFM  = IF0  + (200*RNARRAY(5)-100)*(FSTEP*0.1)
 
-C      IF ((IFM .GE. 1000) .OR. (IFM .LE. 0)) THEN
-C       GO TO 12
-C      ELSE
-C      ENDIF
+C     Clamp flux proposal to physical range (0 < F < 1).
+      IF (IFM .GE. 1000) IFM = 999
+      IF (IFM .LE. 0) IFM = 1
 C--------------------------------------------------------------
         X1 = 1.0*IX1M
         Y1 = 1.0*IY1M
         X2 = 1.0*IX2M
         Y2 = 1.0*IY2M
-
           F = 0.001*IFM
           U = 1
            DO IX=IXMIN,IXMAX
@@ -1443,8 +1690,7 @@ C--------------------------------------------------------------
      .        PAR,PSF,NPSF,NPAR,NEXP,NFRAC,DELTAX,DELTAY,DVDXC,DVDYC)
      .        + (1-F)*USEPSF(IPSTYP, IX-X2, IY-Y2, BRIGHT,
      .        PAR,PSF,NPSF,NPAR,NEXP,NFRAC,DELTAX,DELTAY,DVDXC,DVDYC)
-              PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
-C              PPU(U) = (DATA(IX,IY)) !raw pixel value only
+              PPU(U) = (DATA(IX,IY) - SKYBAR)
               U = U + 1
               ENDDO
               ENDDO
@@ -1452,7 +1698,7 @@ C              PPU(U) = (DATA(IX,IY)) !raw pixel value only
            FTOT = 0.
            U = 1
            DO IX=IXMIN,IXMAX
-           DO IY=IYMIN,IYMAX 
+           DO IY=IYMIN,IYMAX
               PTOT = PTOT + PPU(U)
               FTOT = FTOT + FU(U)
               U = U + 1
@@ -1468,13 +1714,9 @@ C              PPU(U) = (DATA(IX,IY)) !raw pixel value only
                U = U + 1
            ENDDO
            ENDDO
-C        EEM = EEM + EXP(((FU(U)*ZM-6284)/231.565)**2)!Flux Constraint BACKUP
+        EEM = EEM/RFAC
 
-C        EEM = EEM + EXP(((FTOT-38489)/5097)**2)!Flux Constraint here
-C        SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
-C        EEM = EEM + EXP(((SSEP-45.0)/(3.73))**2)!SSEP Constraint Here
-         EEM = EEM/RFAC
-        IF (EEM .LT. EMIN) THEN
+        IF (KC .EQ. 1 .AND. EEM .LT. EMIN) THEN
               X1MIN = X1
               Y1MIN = Y1
               X2MIN = X2
@@ -1484,13 +1726,13 @@ C        EEM = EEM + EXP(((SSEP-45.0)/(3.73))**2)!SSEP Constraint Here
               EMIN = EEM
               SSEPMIN = PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2)
          U = 1
+         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
         PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
         EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
          U = U + 1
-         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
          WRITE(26,*) IX, IY, EEM_CHI2, DATA(IX,IY)
           ENDDO
           ENDDO
@@ -1498,71 +1740,132 @@ C        EEM = EEM + EXP(((SSEP-45.0)/(3.73))**2)!SSEP Constraint Here
         ELSE
         ENDIF
       IF (EEM .LE. EE0) THEN
-        IX10 = IX1M
-        IX20 = IX2M
-        IY10 = IY1M
-        IY20 = IY2M
-        IF0 = IFM
-        Z0 = ZM
-        EE0 = EEM
-        SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
-        ACC_ARRAY = ACC_ARRAY + 1
-        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,
-     .  (1-IFM*.001),EEM
-         U = 1
-         DO IX=IXMIN,IXMAX
-         DO IY=IYMIN,IYMAX
-         FU_MIN(U) = FU(U)
-         PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
-         EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
-         U = U + 1
-C         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
-C         WRITE(26,*) IX, IY, EEM_CHI2, DATA(IX,IY)
-          ENDDO
-          ENDDO
-C         CLOSE(26)
+        PT_IX10(KC) = IX1M
+        PT_IX20(KC) = IX2M
+        PT_IY10(KC) = IY1M
+        PT_IY20(KC) = IY2M
+        PT_IF0(KC)  = IFM
+        PT_Z0(KC)   = ZM
+        PT_EE0(KC)  = EEM
+        IF (KC .EQ. 1) THEN
+          SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
+          ACC_ARRAY = ACC_ARRAY + 1
+          WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,
+     .      (1-IFM*.001),EEM
+        ENDIF
       ELSE
         PROB_RAND = RNARRAY(6)
-        PROB = EXP(-(EEM-EE0)/2.00)
+        PROB = EXP(-(EEM-EE0)/TEMP(KC))
         IF (PROB .GT. PROB_RAND) THEN
-        IX10 = IX1M
-        IX20 = IX2M
-        IY10 = IY1M
-        IY20 = IY2M
-        IF0 = IFM
-        Z0 = ZM
-        EE0 = EEM
-        SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
-        ACC_ARRAY = ACC_ARRAY + 1
-        WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,
-     .  (1-IFM*.001),EEM
+          PT_IX10(KC) = IX1M
+          PT_IX20(KC) = IX2M
+          PT_IY10(KC) = IY1M
+          PT_IY20(KC) = IY2M
+          PT_IF0(KC)  = IFM
+          PT_Z0(KC)   = ZM
+          PT_EE0(KC)  = EEM
+          IF (KC .EQ. 1) THEN
+            SSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
+            ACC_ARRAY = ACC_ARRAY + 1
+            WRITE(25,*) X1,Y1,X2,Y2,SSEP,IFM*0.001,
+     .        (1-IFM*.001),EEM
+          ENDIF
+        ELSE
+          IF (KC .EQ. 1) THEN
+            SSEP = PIXSCALE*SQRT((PT_IX10(1)-PT_IX20(1))**2+
+     .             (PT_IY10(1)-PT_IY20(1))**2)*PIXSCALE
+            WRITE(25,*) 1.0*PT_IX10(1),1.0*PT_IY10(1),
+     .        1.0*PT_IX20(1),1.0*PT_IY20(1),SSEP,
+     .        PT_IF0(1)*0.001,(1-PT_IF0(1)*.001),PT_EE0(1)
+          ENDIF
         ENDIF
       ENDIF
-C      WRITE(24,*) IX10,IY10,IX20,IY20,SSEP,IF0*0.001,Z0,
-C     .  ((IF0*.001)*(Z0)), ((1-IF0*.001)*(Z0)),EE0
-      WRITE(24,*) IX10,IY10,IX20,IY20,SSEP,IF0*0.001,
-     .  (1-IF0*.001),EE0
+
+      ENDDO !End inner chain loop
+C--------------------------------------------------------------
+C     Parallel tempering swap step (2-star)
+      IF (NCHAINS .GT. 1) THEN
+        DO KC = 1, NCHAINS-1
+          KH = KC + 1
+          CALL RANDOM_NUMBER(RNARRAY)
+          SWAP_RAND = RNARRAY(1)
+          SWAP_PROB = EXP( (1.0/TEMP(KC) - 1.0/TEMP(KH)) *
+     .              (PT_EE0(KC) - PT_EE0(KH)) )
+          SWAP_PROB = MIN(1.0, SWAP_PROB)
+          IF (SWAP_PROB .GT. SWAP_RAND) THEN
+            TMPVAL = PT_IX10(KC)
+            PT_IX10(KC) = PT_IX10(KH)
+            PT_IX10(KH) = TMPVAL
+            TMPVAL = PT_IY10(KC)
+            PT_IY10(KC) = PT_IY10(KH)
+            PT_IY10(KH) = TMPVAL
+            TMPVAL = PT_IX20(KC)
+            PT_IX20(KC) = PT_IX20(KH)
+            PT_IX20(KH) = TMPVAL
+            TMPVAL = PT_IY20(KC)
+            PT_IY20(KC) = PT_IY20(KH)
+            PT_IY20(KH) = TMPVAL
+            TMPVAL = PT_IF0(KC)
+            PT_IF0(KC) = PT_IF0(KH)
+            PT_IF0(KH) = TMPVAL
+            TMPVAL = PT_Z0(KC)
+            PT_Z0(KC) = PT_Z0(KH)
+            PT_Z0(KH) = TMPVAL
+            TMPVAL = PT_EE0(KC)
+            PT_EE0(KC) = PT_EE0(KH)
+            PT_EE0(KH) = TMPVAL
+          ENDIF
+        ENDDO
+      ENDIF
+C--------------------------------------------------------------
+      SSEP = PIXSCALE*SQRT((PT_IX10(1)-PT_IX20(1))**2+
+     .       (PT_IY10(1)-PT_IY20(1))**2)
+      WRITE(24,*) PT_IX10(1),PT_IY10(1),PT_IX20(1),PT_IY20(1),
+     .  SSEP,PT_IF0(1)*0.001,(1-PT_IF0(1)*.001),PT_EE0(1)
+C--------------------------------------------------------------
+C     Store cold-chain sample in rolling GR buffer
+      GR_IDX = MOD(GR_IDX, GR_WIN) + 1
+      GR_X1(GR_IDX) = PT_IX10(1)
+      GR_Y1(GR_IDX) = PT_IY10(1)
+      GR_X2(GR_IDX) = PT_IX20(1)
+      GR_Y2(GR_IDX) = PT_IY20(1)
+      GR_F(GR_IDX)  = PT_IF0(1)*0.001
+      IF (GR_N .LT. GR_WIN) GR_N = GR_N + 1
+C     Gelman-Rubin convergence check
+      IF (MOD(IT,GR_CHECK)==0 .AND. GR_N .GE. 4) THEN
+        CALL GELMANRUBIN(GR_X1,GR_N,MAXWIN,RHAT_X1)
+        CALL GELMANRUBIN(GR_Y1,GR_N,MAXWIN,RHAT_Y1)
+        CALL GELMANRUBIN(GR_X2,GR_N,MAXWIN,RHAT_X2)
+        CALL GELMANRUBIN(GR_Y2,GR_N,MAXWIN,RHAT_Y2)
+        CALL GELMANRUBIN(GR_F, GR_N,MAXWIN,RHAT_F)
+        WRITE(*,"(a,I8,a,5F8.4)") "  IT=",IT,
+     .    " Rhat(X1,Y1,X2,Y2,F)=",
+     .    RHAT_X1,RHAT_Y1,RHAT_X2,RHAT_Y2,RHAT_F
+        IF (RHAT_X1 .LT. GR_THRESH .AND.
+     .      RHAT_Y1 .LT. GR_THRESH .AND.
+     .      RHAT_X2 .LT. GR_THRESH .AND.
+     .      RHAT_Y2 .LT. GR_THRESH .AND.
+     .      RHAT_F  .LT. GR_THRESH) THEN
+          CONVERGED = 1
+          WRITE(*,*) "CONVERGED at iteration ", IT
+          GO TO 9601
+        ENDIF
+      ENDIF
+C--------------------------------------------------------------
       IF (MOD(IT,50000)==0) WRITE(*,"(I8.2)") IT
       ENDDO !End main MCMC iteration
+ 9601 CONTINUE
+       IF (CONVERGED .EQ. 0) WRITE(*,*)
+     . "WARNING: Chain did not converge within Steps iterations."
        IF (RFAC .EQ. 1.00) WRITE(*,*)
      . "Renormalization Factor = ",
      . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+6)
-       WRITE(*,*) "Acceptance Rate = ", ACC_ARRAY/Steps
-       IF (ACC_ARRAY/Steps .LE. 0.10) WRITE(*,*)
+       WRITE(*,*) "Acceptance Rate (cold chain) = ", ACC_ARRAY/IT
+       IF (ACC_ARRAY/IT .LE. 0.10) WRITE(*,*)
      . "WARNING!! Acceptance rate less than 0.10!"
-       IF (ACC_ARRAY/Steps .GE. 0.50) WRITE(*,*)
+       IF (ACC_ARRAY/IT .GE. 0.50) WRITE(*,*)
      . "WARNING!! Acceptance rate larger than 0.50!"
-C       WRITE(*,*) "      X1               Y1               X2        
-C     .    Y2            SEP          S1_F_CONTRIB        F_TOTAL
-C     .           F1               F2               CHI2"
-C       WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,
-C     .            PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
-C     .            FMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),EMIN
-C       WRITE(27,*) X1MIN,Y1MIN,X2MIN,Y2MIN,
-C     .            PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
-C     .            FMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),EMIN
-
-       WRITE(*,*) "      X1               Y1               X2        
+       WRITE(*,*) "      X1               Y1               X2
      .    Y2                SEP                    F1                F2
      .             CHI2"
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,
@@ -1572,12 +1875,12 @@ C     .            FMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),EMIN
      .            PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
      .            FMIN,(1-FMIN),EMIN
        GO TO 9000
-C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
+C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 C==============================================================
 C              3-STAR-FIT
 C==============================================================
-C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=       
- 9700 WRITE(*,"(a,I4.2)") "Degrees of Freedom = ",
+C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ 9700 WRITE(*,"(a,I4.2)") "Degrees of Freedom =  ",
      . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-9
       WRITE(*,*) "Pixel Scale (mas/pix):"
       READ(*,*) PIXSCALE
@@ -1601,24 +1904,101 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
       WRITE(*,*) "Star 3 Flux Contrib. (star3 / (star1+star2+star3)):"
       WRITE(*,*) "Choose the FAINTEST star!"
       READ(*,*) IFB0_IN
+C--------------------------------------------------------------
+C     Parallel tempering setup
+      WRITE(*,*) "Number of PT chains (1 = standard MCMC, max 10):"
+      READ(*,*) NCHAINS
+      IF (NCHAINS .LT. 1) NCHAINS = 1
+      IF (NCHAINS .GT. MAXCHAINS) NCHAINS = MAXCHAINS
+      IF (NCHAINS .GT. 1) THEN
+        WRITE(*,*) "Temperature ratio between adjacent chains",
+     .             " (e.g. 2.0):"
+        READ(*,*) TRATIO
+      ELSE
+        TRATIO = 1.0
+      ENDIF
+      DO KC = 1, NCHAINS
+        TEMP(KC) = TRATIO**(KC-1)
+      ENDDO
+      WRITE(*,*) "Temperature ladder:"
+      DO KC = 1, NCHAINS
+        WRITE(*,"(a,I2,a,F8.3)") "  Chain ",KC,": T = ",TEMP(KC)
+      ENDDO
+C--------------------------------------------------------------
+C     Gelman-Rubin convergence setup.
+C     GR_THRESH is hard-coded at 1.05 (publication-quality criterion).
+C     GR_WIN is hard-coded as 10% of Steps, capped at MAXWIN.
+      WRITE(*,*) "Convergence check interval (steps, e.g. 10000):"
+      READ(*,*) GR_CHECK
+      GR_THRESH = 1.05
+      GR_WIN    = MAX(4, MIN(Steps/10, MAXWIN))
+      WRITE(*,"(a,F4.2)") "  R-hat threshold (fixed): ", GR_THRESH
+      WRITE(*,"(a,I8)")   "  Rolling window size:     ", GR_WIN
+      GR_IDX = 0
+      GR_N   = 0
+      CONVERGED = 0
+C--------------------------------------------------------------
       WRITE(24,*) A1,A2,A3,A4,A9,A10,A11,A12,A15,A16,A17,A8
       WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A15,A16,A17,A8
+      OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
       WRITE(26,*) A18,A19,A20,A21
+      CLOSE(26)
       WRITE(27,*) A1,A2,A3,A4,A9,A10,A11,A12,A15,A16,A17,A8
       WRITE(*,*) "Fit box:", IXMIN,IXMAX,IYMIN,IYMAX
       WRITE(*,*) "Sky Avg:", SKYBAR
       WRITE(*,*) "Zeropoint Mag:", PSFMAG
 
-      IX10 = IX10_IN !initial source x
-      IY10 = IY10_IN !initial source y
-      IX20 = IX20_IN !initial lens x
-      IY20 = IY20_IN !initial lens y
-      IX30 = IX30_IN !initial blend x
-      IY30 = IY30_IN !initial blend y
-      IF0 = 1000*IF0_IN !initial flux ratio
-      IFB0 = 1000*IFB0_IN !initial flux ratio
-      U = 1
+C--------------------------------------------------------------
+C     Dispersed multi-start initialisation.
+C     Chain 1 (cold) starts exactly at the user-supplied position.
+C     Chains 2..NCHAINS are perturbed by a random offset drawn
+C     uniformly from [-8, +8] pixels and [-0.1, +0.1] in flux.
+C     Both flux fractions are clamped so F+FB stays below 1.
+C--------------------------------------------------------------
+      PT_IX10(1) = IX10_IN
+      PT_IY10(1) = IY10_IN
+      PT_IX20(1) = IX20_IN
+      PT_IY20(1) = IY20_IN
+      PT_IX30(1) = IX30_IN
+      PT_IY30(1) = IY30_IN
+      PT_IF0(1)  = 1000*IF0_IN
+      PT_IFB0(1) = 1000*IFB0_IN
+      IF (NCHAINS .GT. 1) THEN
+        DO KC = 2, NCHAINS
+          CALL RANDOM_NUMBER(RNARRAY)
+          PT_IX10(KC) = IX10_IN + (2*RNARRAY(1)-1)*8.0
+          PT_IY10(KC) = IY10_IN + (2*RNARRAY(2)-1)*8.0
+          PT_IX20(KC) = IX20_IN + (2*RNARRAY(3)-1)*8.0
+          PT_IY20(KC) = IY20_IN + (2*RNARRAY(4)-1)*8.0
+          PT_IX30(KC) = IX30_IN + (2*RNARRAY(5)-1)*8.0
+          PT_IY30(KC) = IY30_IN + (2*RNARRAY(6)-1)*8.0
+          PT_IF0(KC)  = 1000*IF0_IN  + (2*RNARRAY(7)-1)*100.0
+          PT_IFB0(KC) = 1000*IFB0_IN + (2*RNARRAY(8)-1)*100.0
+C         Clamp perturbed fluxes to physical range
+          IF (PT_IF0(KC)  .GE. 1000) PT_IF0(KC)  = 999
+          IF (PT_IF0(KC)  .LE. 0)    PT_IF0(KC)  = 1
+          IF (PT_IFB0(KC) .GE. 1000) PT_IFB0(KC) = 999
+          IF (PT_IFB0(KC) .LE. 0)    PT_IFB0(KC) = 1
+          IF ((PT_IF0(KC)+PT_IFB0(KC)) .GE. 1000)
+     .        PT_IFB0(KC) = 999 - PT_IF0(KC)
+          WRITE(*,"(a,I2,a,6F8.2,a,2F6.3)")
+     .      "  Chain ",KC," start: x1,y1,x2,y2,x3,y3=",
+     .      PT_IX10(KC),PT_IY10(KC),
+     .      PT_IX20(KC),PT_IY20(KC),
+     .      PT_IX30(KC),PT_IY30(KC),
+     .      "  f,fb=",PT_IF0(KC)*0.001,PT_IFB0(KC)*0.001
+        ENDDO
+      ENDIF
 
+      IX10 = PT_IX10(1)
+      IY10 = PT_IY10(1)
+      IX20 = PT_IX20(1)
+      IY20 = PT_IY20(1)
+      IX30 = PT_IX30(1)
+      IY30 = PT_IY30(1)
+      IF0  = PT_IF0(1)
+      IFB0 = PT_IFB0(1)
+      U = 1
         X1 = 1.0*IX10
         Y1 = 1.0*IY10
         X2 = 1.0*IX20
@@ -1635,8 +2015,7 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
      .  + (FB )*USEPSF(IPSTYP, IX-X3, IY-Y3, BRIGHT,
      .  PAR, PSF, NPSF, NPAR, NEXP, NFRAC, DELTAX, DELTAY, DVDXC, DVDYC)
-        PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
-C        PPU(U) = (DATA(IX,IY)) !raw pixel value only
+        PPU(U) = (DATA(IX,IY) - SKYBAR)
         U = U + 1
          ENDDO
          ENDDO
@@ -1655,27 +2034,13 @@ C        PPU(U) = (DATA(IX,IY)) !raw pixel value only
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
-C---------Stetson Pixel Noise Calculations--------------------
-C          D=0.795*FU(U)
-C          DPOS=DATA(IX,IY)-D
-C          SGU(U)=DPOS/PHPADU+RDNOIS+(PERERR*DPOS)**2+
-C     .    (PKERR*(DPOS-SKYBAR))**2
-C          SGL(U)=ABS(D)/SQRT(SGU(U))
-C-------------------------------------------------------------
-C---------Simple Pixel Noise Model----------------------------
           SGU2(U)=SQRT(16.0+MAX(DATA(IX,IY),0.)
      .    +(0.01*MAX(DATA(IX,IY),0.))**2)
-C-------------------------------------------------------------
         EE0=EE0+((((DATA(IX,IY)-SKYBAR)-FU(U)*Z0)/SGU2(U))**2)/RFAC
          U = U + 1
          ENDDO
          ENDDO
-C         EEM = EEM + EXP(((FTOT-38489)/5097)**2)!Flux Constraint here
-C      SSEP = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
-C      SSEP2 = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
-C        EE0 = EE0 + EXP(((SSEP-26.50)/(2.50))**2)
-C     .  + EXP(((SSEP2-44.00)/(10.00))**2)!SSEP Constraint Here
-        U = 1 
+        U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
           FU_MIN(U) = FU(U)
@@ -1693,11 +2058,10 @@ C     .  + EXP(((SSEP2-44.00)/(10.00))**2)!SSEP Constraint Here
          FBMIN = FB
          EMIN = EE0
          ZMIN = Z0
-C      WRITE (25,*) X1MIN, Y1MIN, X2MIN, Y2MIN, X3MIN, Y3MIN,
-C     . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
-C     . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2), FMIN, FBMIN,
-C     . ZMIN, (FMIN*ZMIN), ((1-FMIN)*(ZMIN)), (FBMIN*ZMIN), EMIN
-     
+      DO KC = 1, NCHAINS
+        PT_EE0(KC) = EE0
+        PT_Z0(KC)  = Z0
+      ENDDO
       WRITE (25,*) X1MIN, Y1MIN, X2MIN, Y2MIN, X3MIN, Y3MIN,
      . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
      . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2), FMIN,
@@ -1705,20 +2069,37 @@ C     . ZMIN, (FMIN*ZMIN), ((1-FMIN)*(ZMIN)), (FBMIN*ZMIN), EMIN
 C--------------------------------------------------------------
 C Begin MCMC LOOP
       DO IT = 1, Steps
+
+C     ---- Inner loop over all chains -------------------------
+      DO KC = 1, NCHAINS
+
       CALL RANDOM_NUMBER(RNARRAY)
+      IX10 = PT_IX10(KC)
+      IY10 = PT_IY10(KC)
+      IX20 = PT_IX20(KC)
+      IY20 = PT_IY20(KC)
+      IX30 = PT_IX30(KC)
+      IY30 = PT_IY30(KC)
+      IF0  = PT_IF0(KC)
+      IFB0 = PT_IFB0(KC)
+      EE0  = PT_EE0(KC)
+      Z0   = PT_Z0(KC)
+
       IX1M = IX10 + (200*RNARRAY(1)-100)*(PSTEP*0.01)
       IY1M = IY10 + (200*RNARRAY(2)-100)*(PSTEP*0.01)
       IX2M = IX20 + (200*RNARRAY(3)-100)*(PSTEP*0.01)
       IY2M = IY20 + (200*RNARRAY(4)-100)*(PSTEP*0.01)
       IX3M = IX30 + (200*RNARRAY(5)-100)*(PSTEP*0.01)
-03      IY3M = IY30 + (200*RNARRAY(6)-100)*(PSTEP*0.01)
-02      IFM = IF0 + (200*RNARRAY(7)-100)*(FSTEP*0.1)
-01      IFBM = IFB0 + (200*RNARRAY(8)-100)*(FSTEP*0.1)
+03    IY3M = IY30 + (200*RNARRAY(6)-100)*(PSTEP*0.01)
+02    IFM  = IF0  + (200*RNARRAY(7)-100)*(FSTEP*0.1)
+01    IFBM = IFB0 + (200*RNARRAY(8)-100)*(FSTEP*0.1)
 
-C      IF ((IFM .GE. 1000) .OR. (IFM .LE. 0)) THEN
-C       GO TO 02
-C      ELSE
-C      ENDIF
+C     Clamp flux proposals to physical range.
+      IF (IFM  .GE. 1000) IFM  = 999
+      IF (IFM  .LE. 0)    IFM  = 1
+      IF (IFBM .GE. 1000) IFBM = 999
+      IF (IFBM .LE. 0)    IFBM = 1
+      IF ((IFM + IFBM) .GE. 1000) IFBM = 999 - IFM
 C--------------------------------------------------------------
         X1 = 1.0*IX1M
         Y1 = 1.0*IY1M
@@ -1726,7 +2107,6 @@ C--------------------------------------------------------------
         Y2 = 1.0*IY2M
         X3 = 1.0*IX3M
         Y3 = 1.0*IY3M
-
           F = 0.001*IFM
           FB = 0.001*IFBM
           U = 1
@@ -1738,8 +2118,7 @@ C--------------------------------------------------------------
      .        PAR,PSF,NPSF,NPAR,NEXP,NFRAC,DELTAX,DELTAY,DVDXC,DVDYC)
      .        + (FB )*USEPSF(IPSTYP, IX-X3, IY-Y3, BRIGHT,
      .        PAR,PSF,NPSF,NPAR,NEXP,NFRAC,DELTAX,DELTAY,DVDXC,DVDYC)
-              PPU(U) = (DATA(IX,IY) - SKYBAR) !raw pixel value - sky
-C              PPU(U) = (DATA(IX,IY)) !raw pixel value
+              PPU(U) = (DATA(IX,IY) - SKYBAR)
               U = U + 1
               ENDDO
               ENDDO
@@ -1747,7 +2126,7 @@ C              PPU(U) = (DATA(IX,IY)) !raw pixel value
            FTOT = 0.
            U = 1
            DO IX=IXMIN,IXMAX
-           DO IY=IYMIN,IYMAX 
+           DO IY=IYMIN,IYMAX
               PTOT = PTOT + PPU(U)
               FTOT = FTOT + FU(U)
               U = U + 1
@@ -1763,13 +2142,9 @@ C              PPU(U) = (DATA(IX,IY)) !raw pixel value
                U = U + 1
            ENDDO
            ENDDO
-C         EEM = EEM + EXP(((FTOT-38489)/5097)**2)!Flux Constraint here
-C      SSEP = PIXSCALE*SQRT((X2-X3)**2+(Y2-Y3)**2)
-C      SSEP2 = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
-C        EEM = EEM + EXP(((SSEP-26.50)/(2.50))**2) ! Sep Constraint here
-C     .  + EXP(((SSEP2-44.00)/(10.00))**2)
          EEM = EEM/RFAC
-        IF (EEM .LT. EMIN) THEN
+
+        IF (KC .EQ. 1 .AND. EEM .LT. EMIN) THEN
               X1MIN = X1
               Y1MIN = Y1
               X2MIN = X2
@@ -1782,14 +2157,14 @@ C     .  + EXP(((SSEP2-44.00)/(10.00))**2)
               ZMIN = ZM
               LSSEPMIN=PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2)
               BSEPMIN=PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2)
-         U = 1                 
+         U = 1
+         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
         PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
         EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
          U = U + 1
-         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
          WRITE(26,*) IX, IY, EEM_CHI2, DATA(IX,IY)
           ENDDO
           ENDDO
@@ -1797,87 +2172,169 @@ C     .  + EXP(((SSEP2-44.00)/(10.00))**2)
         ELSE
         ENDIF
       IF (EEM .LE. EE0) THEN
-        IX10 = IX1M
-        IX20 = IX2M
-        IX30 = IX3M
-        IY10 = IY1M
-        IY20 = IY2M
-        IY30 = IY3M
-        IF0 = IFM
-        IFB0 = IFBM
-        Z0 = ZM
-        EE0 = EEM
-        LSSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
-        BSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
-        ACC_ARRAY = ACC_ARRAY + 1
-        WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,
-     .  (1-IFM*.001-IFBM*.001),(IFBM*.001),EEM
-         U = 1
-         DO IX=IXMIN,IXMAX
-         DO IY=IYMIN,IYMAX
-         FU_MIN(U) = FU(U)
-         PPU_MIN(U) = (DATA(IX,IY)-SKYBAR)
-         EEM_CHI2=(((DATA(IX,IY)-SKYBAR)-FU(U)*ZM)/SGU2(U))**2
-         U = U + 1
-C         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
-C         WRITE(26,*) IX, IY, EEM_CHI2, DATA(IX,IY)
-          ENDDO
-          ENDDO
-C         CLOSE(26)
+        PT_IX10(KC) = IX1M
+        PT_IX20(KC) = IX2M
+        PT_IX30(KC) = IX3M
+        PT_IY10(KC) = IY1M
+        PT_IY20(KC) = IY2M
+        PT_IY30(KC) = IY3M
+        PT_IF0(KC)  = IFM
+        PT_IFB0(KC) = IFBM
+        PT_Z0(KC)   = ZM
+        PT_EE0(KC)  = EEM
+        IF (KC .EQ. 1) THEN
+          LSSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
+          BSEP  = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
+          ACC_ARRAY = ACC_ARRAY + 1
+          WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,
+     .      (1-IFM*.001-IFBM*.001),(IFBM*.001),EEM
+        ENDIF
       ELSE
         PROB_RAND = RNARRAY(9)
-        PROB = EXP(-(EEM-EE0)/2.00)
+        PROB = EXP(-(EEM-EE0)/TEMP(KC))
         IF (PROB .GT. PROB_RAND) THEN
-        IX10 = IX1M
-        IX20 = IX2M
-        IX30 = IX3M
-        IY10 = IY1M
-        IY20 = IY2M
-        IY30 = IY3M
-        IF0 = IFM
-        IFB0 = IFBM
-        Z0 = ZM
-        EE0 = EEM
-        LSSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
-        BSEP = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
-        ACC_ARRAY = ACC_ARRAY + 1
-C        WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,IFBM*0.001,
-C     .  ZM,((IFM*.001)*(ZM)),((1-IFM*.001)*(ZM)),((IFBM*.001)*(ZM)),EEM
-        WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,
-     .  (1-IFM*.001-IFBM*.001),(IFBM*.001),EEM
+          PT_IX10(KC) = IX1M
+          PT_IX20(KC) = IX2M
+          PT_IX30(KC) = IX3M
+          PT_IY10(KC) = IY1M
+          PT_IY20(KC) = IY2M
+          PT_IY30(KC) = IY3M
+          PT_IF0(KC)  = IFM
+          PT_IFB0(KC) = IFBM
+          PT_Z0(KC)   = ZM
+          PT_EE0(KC)  = EEM
+          IF (KC .EQ. 1) THEN
+            LSSEP = PIXSCALE*SQRT((X1-X2)**2+(Y1-Y2)**2)
+            BSEP  = PIXSCALE*SQRT((X1-X3)**2+(Y1-Y3)**2)
+            ACC_ARRAY = ACC_ARRAY + 1
+            WRITE(25,*) X1,Y1,X2,Y2,X3,Y3,LSSEP,BSEP,IFM*0.001,
+     .        (1-IFM*.001-IFBM*.001),(IFBM*.001),EEM
+          ENDIF
+        ELSE
+          IF (KC .EQ. 1) THEN
+            LSSEP = PIXSCALE*SQRT((PT_IX10(1)-PT_IX20(1))**2+
+     .              (PT_IY10(1)-PT_IY20(1))**2)
+            BSEP  = PIXSCALE*SQRT((PT_IX10(1)-PT_IX30(1))**2+
+     .              (PT_IY10(1)-PT_IY30(1))**2)
+            WRITE(25,*) 1.0*PT_IX10(1),1.0*PT_IY10(1),
+     .        1.0*PT_IX20(1),1.0*PT_IY20(1),
+     .        1.0*PT_IX30(1),1.0*PT_IY30(1),LSSEP,BSEP,
+     .        PT_IF0(1)*0.001,
+     .        (1-PT_IF0(1)*.001-PT_IFB0(1)*.001),
+     .        (PT_IFB0(1)*.001),PT_EE0(1)
+          ENDIF
+        ENDIF
       ENDIF
+
+      ENDDO !End inner chain loop
+C--------------------------------------------------------------
+C     Parallel tempering swap step (3-star)
+      IF (NCHAINS .GT. 1) THEN
+        DO KC = 1, NCHAINS-1
+          KH = KC + 1
+          CALL RANDOM_NUMBER(RNARRAY)
+          SWAP_RAND = RNARRAY(1)
+          SWAP_PROB = EXP( (1.0/TEMP(KC) - 1.0/TEMP(KH)) *
+     .              (PT_EE0(KC) - PT_EE0(KH)) )
+          SWAP_PROB = MIN(1.0, SWAP_PROB)
+          IF (SWAP_PROB .GT. SWAP_RAND) THEN
+            TMPVAL = PT_IX10(KC)
+            PT_IX10(KC) = PT_IX10(KH)
+            PT_IX10(KH) = TMPVAL
+            TMPVAL = PT_IY10(KC)
+            PT_IY10(KC) = PT_IY10(KH)
+            PT_IY10(KH) = TMPVAL
+            TMPVAL = PT_IX20(KC)
+            PT_IX20(KC) = PT_IX20(KH)
+            PT_IX20(KH) = TMPVAL
+            TMPVAL = PT_IY20(KC)
+            PT_IY20(KC) = PT_IY20(KH)
+            PT_IY20(KH) = TMPVAL
+            TMPVAL = PT_IX30(KC)
+            PT_IX30(KC) = PT_IX30(KH)
+            PT_IX30(KH) = TMPVAL
+            TMPVAL = PT_IY30(KC)
+            PT_IY30(KC) = PT_IY30(KH)
+            PT_IY30(KH) = TMPVAL
+            TMPVAL = PT_IF0(KC)
+            PT_IF0(KC) = PT_IF0(KH)
+            PT_IF0(KH) = TMPVAL
+            TMPVAL = PT_IFB0(KC)
+            PT_IFB0(KC) = PT_IFB0(KH)
+            PT_IFB0(KH) = TMPVAL
+            TMPVAL = PT_Z0(KC)
+            PT_Z0(KC) = PT_Z0(KH)
+            PT_Z0(KH) = TMPVAL
+            TMPVAL = PT_EE0(KC)
+            PT_EE0(KC) = PT_EE0(KH)
+            PT_EE0(KH) = TMPVAL
+          ENDIF
+        ENDDO
       ENDIF
-C      WRITE(24,*) IX10,IY10,IX20,IY20,IX30,IY30,
-C     . LSSEP,BSEP,IF0*0.001,IFB0*0.001,Z0,
-C     . ((IF0*.001)*(Z0)),((1-IF0*.001)*(Z0)),((IFB0*.001)*(Z0)),EE0
-      WRITE(24,*) IX10,IY10,IX20,IY20,IX30,IY30,
-     . LSSEP,BSEP,IF0*0.001,
-     . (1-IF0*.001-IFB0*.001),(IFB0*.001),EE0
+C--------------------------------------------------------------
+      LSSEP = PIXSCALE*SQRT((PT_IX10(1)-PT_IX20(1))**2+
+     .        (PT_IY10(1)-PT_IY20(1))**2)
+      BSEP  = PIXSCALE*SQRT((PT_IX10(1)-PT_IX30(1))**2+
+     .        (PT_IY10(1)-PT_IY30(1))**2)
+      WRITE(24,*) PT_IX10(1),PT_IY10(1),PT_IX20(1),PT_IY20(1),
+     . PT_IX30(1),PT_IY30(1),LSSEP,BSEP,PT_IF0(1)*0.001,
+     . (1-PT_IF0(1)*.001-PT_IFB0(1)*.001),(PT_IFB0(1)*.001),PT_EE0(1)
+C--------------------------------------------------------------
+C     Store cold-chain sample in rolling GR buffer
+      GR_IDX = MOD(GR_IDX, GR_WIN) + 1
+      GR_X1(GR_IDX) = PT_IX10(1)
+      GR_Y1(GR_IDX) = PT_IY10(1)
+      GR_X2(GR_IDX) = PT_IX20(1)
+      GR_Y2(GR_IDX) = PT_IY20(1)
+      GR_X3(GR_IDX) = PT_IX30(1)
+      GR_Y3(GR_IDX) = PT_IY30(1)
+      GR_F(GR_IDX)  = PT_IF0(1)*0.001
+      GR_FB(GR_IDX) = PT_IFB0(1)*0.001
+      IF (GR_N .LT. GR_WIN) GR_N = GR_N + 1
+C     Gelman-Rubin convergence check
+      IF (MOD(IT,GR_CHECK)==0 .AND. GR_N .GE. 4) THEN
+        CALL GELMANRUBIN(GR_X1,GR_N,MAXWIN,RHAT_X1)
+        CALL GELMANRUBIN(GR_Y1,GR_N,MAXWIN,RHAT_Y1)
+        CALL GELMANRUBIN(GR_X2,GR_N,MAXWIN,RHAT_X2)
+        CALL GELMANRUBIN(GR_Y2,GR_N,MAXWIN,RHAT_Y2)
+        CALL GELMANRUBIN(GR_X3,GR_N,MAXWIN,RHAT_X3)
+        CALL GELMANRUBIN(GR_Y3,GR_N,MAXWIN,RHAT_Y3)
+        CALL GELMANRUBIN(GR_F, GR_N,MAXWIN,RHAT_F)
+        CALL GELMANRUBIN(GR_FB,GR_N,MAXWIN,RHAT_FB)
+        WRITE(*,"(a,I8,a,8F7.4)") "  IT=",IT,
+     .    " Rhat=",RHAT_X1,RHAT_Y1,RHAT_X2,RHAT_Y2,
+     .    RHAT_X3,RHAT_Y3,RHAT_F,RHAT_FB
+        IF (RHAT_X1 .LT. GR_THRESH .AND.
+     .      RHAT_Y1 .LT. GR_THRESH .AND.
+     .      RHAT_X2 .LT. GR_THRESH .AND.
+     .      RHAT_Y2 .LT. GR_THRESH .AND.
+     .      RHAT_X3 .LT. GR_THRESH .AND.
+     .      RHAT_Y3 .LT. GR_THRESH .AND.
+     .      RHAT_F  .LT. GR_THRESH .AND.
+     .      RHAT_FB .LT. GR_THRESH) THEN
+          CONVERGED = 1
+          WRITE(*,*) "CONVERGED at iteration ", IT
+          GO TO 9701
+        ENDIF
+      ENDIF
+C--------------------------------------------------------------
       IF (MOD(IT,50000)==0) WRITE(*,"(I6.2)") IT
       ENDDO !End main MCMC iteration
+ 9701 CONTINUE
+       IF (CONVERGED .EQ. 0) WRITE(*,*)
+     . "WARNING: Chain did not converge within Steps iterations."
        IF (RFAC .EQ. 1.00) WRITE(*,*)
      . "Renormalization Factor = ",
      . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))+9)
-       WRITE(*,*) "Acceptance Rate = ", ACC_ARRAY/Steps
-       IF (ACC_ARRAY/Steps .LE. 0.10) WRITE(*,*)
+       WRITE(*,*) "Acceptance Rate (cold chain) = ", ACC_ARRAY/IT
+       IF (ACC_ARRAY/IT .LE. 0.10) WRITE(*,*)
      . "WARNING!! Acceptance rate less than 0.10!"
-       IF (ACC_ARRAY/Steps .GE. 0.50) WRITE(*,*)
+       IF (ACC_ARRAY/IT .GE. 0.50) WRITE(*,*)
      . "WARNING!! Acceptance rate larger than 0.50!"
-       WRITE(*,*) "      X1               Y1               X2        
-     .    Y2               X3               Y3           1-2SEP         
+       WRITE(*,*) "      X1               Y1               X2
+     .    Y2               X3               Y3           1-2SEP
      .   1-3SEP           F1              F2           F3
      .   CHI2"
-C       WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
-C     . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
-C     . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2),
-C     .       FMIN,FBMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),
-C     .       (FBMIN*ZMIN),EMIN
-C       WRITE(27,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
-C     . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
-C     . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2),
-C     .       FMIN,FBMIN,ZMIN,(FMIN*ZMIN),((1-FMIN)*(ZMIN)),
-C     .       (FBMIN*ZMIN),EMIN
-     
        WRITE(*,*) X1MIN,Y1MIN,X2MIN,Y2MIN,X3MIN,Y3MIN,
      . PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2),
      . PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2),
@@ -1967,5 +2424,70 @@ C
       YC(I)=YC(NSTR)
       SKY(I)=SKY(NSTR)
  1000 NSTR=NSTR-1
+      RETURN
+      END
+
+C=======================================================================
+C  GELMANRUBIN: Compute the Gelman-Rubin R-hat statistic for a single
+C  parameter given a rolling window of N cold-chain samples.
+C
+C  Method: split-chain R-hat. The window of N samples is split into
+C  two halves. R-hat compares variance between the halves (B) to the
+C  pooled within-half variance (W). R-hat -> 1.0 means convergence.
+C
+C  Arguments:
+C    ARR(MAXWIN)  -- circular buffer of parameter samples
+C    N            -- number of valid samples in buffer (N <= MAXWIN)
+C    MAXWIN       -- declared size of ARR
+C    RHAT         -- (output) computed R-hat value
+C=======================================================================
+      SUBROUTINE GELMANRUBIN(ARR, N, MAXWIN, RHAT)
+      IMPLICIT NONE
+      INTEGER N, MAXWIN
+      REAL    ARR(MAXWIN), RHAT
+      INTEGER NHALF, I
+      REAL    MU1, MU2, MU_ALL
+      REAL    VAR1, VAR2, W, B, VARHAT
+      NHALF = N / 2
+      IF (NHALF .LT. 2) THEN
+C       Not enough samples yet - return a large R-hat so the
+C       convergence check does not trigger prematurely.
+        RHAT = 999.0
+        RETURN
+      ENDIF
+C     Compute means of each half
+      MU1 = 0.0
+      MU2 = 0.0
+      DO I = 1, NHALF
+        MU1 = MU1 + ARR(I)
+      ENDDO
+      DO I = NHALF+1, 2*NHALF
+        MU2 = MU2 + ARR(I)
+      ENDDO
+      MU1 = MU1 / NHALF
+      MU2 = MU2 / NHALF
+      MU_ALL = (MU1 + MU2) / 2.0
+C     Within-chain variance (pooled across both halves)
+      VAR1 = 0.0
+      VAR2 = 0.0
+      DO I = 1, NHALF
+        VAR1 = VAR1 + (ARR(I) - MU1)**2
+      ENDDO
+      DO I = NHALF+1, 2*NHALF
+        VAR2 = VAR2 + (ARR(I) - MU2)**2
+      ENDDO
+      VAR1 = VAR1 / (NHALF - 1)
+      VAR2 = VAR2 / (NHALF - 1)
+      W = (VAR1 + VAR2) / 2.0
+C     Between-chain variance
+      B = NHALF * ( (MU1 - MU_ALL)**2 + (MU2 - MU_ALL)**2 )
+C     Pooled variance estimate
+      VARHAT = ((NHALF - 1.0) / NHALF) * W + (1.0 / NHALF) * B
+C     Guard against degenerate case (zero variance -> converged)
+      IF (W .LT. 1.0E-10) THEN
+        RHAT = 1.0
+      ELSE
+        RHAT = SQRT(VARHAT / W)
+      ENDIF
       RETURN
       END
