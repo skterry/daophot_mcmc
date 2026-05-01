@@ -1,0 +1,18 @@
+# params.in
+FIT_STARS = 2
+PIXSCALE  = 9.942        # mas/pix (2-star and 3-star only)
+RFAC      = 0.068
+STEPS     = 200000
+PSTEP     = 0.04
+FSTEP     = 0.04
+STAR1_X   = 1175
+STAR1_Y   = 987
+STAR2_X   = 1185       # 2-star and 3-star only
+STAR2_Y   = 990
+STAR3_X   = 1160      # 3-star only
+STAR3_Y   = 990
+FLUX1     = 0.9
+FLUX3     = 0.10         # 3-star only
+NCHAINS   = 8
+TRATIO    = 1.5          # only used when NCHAINS > 1
+GR_CHECK  = 50000

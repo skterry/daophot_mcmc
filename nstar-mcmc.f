@@ -90,6 +90,10 @@ C
       INTEGER NIMU, NIT
       INTEGER NSTU
       INTEGER PPOS
+      INTEGER NTRIAL
+      INTEGER PNLINES, PIOS
+      LOGICAL PARAMS_EXIST, PFOUND
+      CHARACTER*256 PLINES(50), PBUF, PVAL
       REAL, DIMENSION(9) :: RNARRAY
       CHARACTER(LEN=15) A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,A11,A12,A13,A14
       CHARACTER(LEN=15) A15,A16,A17,A18,A19,A20,A21,A22,A23,A24
@@ -231,81 +235,10 @@ C
          GO TO 980
       END IF
 C
+C Output filenames are set automatically based on FIT_STARS after params.in
+C is read (see below). No user prompts for file names.
 C
-C Inquire the name of the MCMC output file, and open it.
-C      MCMCFIL=SWITCH(GRPFIL, CASE('.mc'))
-   24 CALL GETNAM ('File for FULL MCMC chain:', MCMCALL)
-      IF ((MCMCFIL .EQ. 'END-OF-FILE') .OR.
-     .     (MCMCFIL .EQ. 'GIVE UP')) THEN
-         CALL CLFILE (3)
-         MCMCFIL = ' '
-         RETURN
-      END IF
-C     
-C      CALL OUTFIL (11, MCMCFIL, IER)
-C      IF (IER .NE. 0) THEN
-C         CALL STUPID ('Error opening output file '//MCMCFIL)
-C         MCMCFIL = 'GIVE UP'
-C         GO TO 25
-C      END IF
-C      CLOSE(25)
-C
-C
-C Inquire the name of the MCMC output file, and open it.
-C      MCMCFIL=SWITCH(GRPFIL, CASE('.mc'))
-   25 CALL GETNAM ('File for ACCEPTED MCMC chains:', MCMCFIL)
-      IF ((MCMCFIL .EQ. 'END-OF-FILE') .OR.
-     .     (MCMCFIL .EQ. 'GIVE UP')) THEN
-         CALL CLFILE (3)
-         MCMCFIL = ' '
-         RETURN
-      END IF
-C     
-C      CALL OUTFIL (11, MCMCFIL, IER)
-C      IF (IER .NE. 0) THEN
-C         CALL STUPID ('Error opening output file '//MCMCFIL)
-C         MCMCFIL = 'GIVE UP'
-C         GO TO 25
-C      END IF
-C      CLOSE(25)
-C
-C
-C Inquire the name of the chisq_pix output file, and open it.
-C      CHISQPIXFIL=SWITCH(MCMCFIL, CASE('.ch2'))
-   26 CALL GETNAM ('File for CHISQ_PIXEL results:', CHISQPIXFIL)
-      IF ((CHISQPIXFIL .EQ. 'END-OF-FILE') .OR.
-     .     (CHISQPIXFIL .EQ. 'GIVE UP')) THEN
-         CALL CLFILE (4)
-         CHISQPIXFIL = ' '
-         RETURN
-      END IF
-C      
-C      CALL OUTFIL (1, CHISQPIXFIL, IER)
-C      IF (IER .NE. 0) THEN
-C         CALL STUPID ('Error opening output file '//CHISQPIXFIL)
-C         CHISQPIXFIL = 'GIVE UP'
-C         GO TO 9300
-C      END IF     
-C
-C
-C Inquire the name of the BEST_FIT output file, and open it.
-C      BESTFIL=SWITCH(CHISQPIXFIL, CASE('.bf'))
-   27 CALL GETNAM ('File for BEST_FIT results:', BESTFIL)
-      IF ((BESTFIL .EQ. 'END-OF-FILE') .OR.
-     .     (BESTFIL .EQ. 'GIVE UP')) THEN
-         CALL CLFILE (5)
-         BESTFIL = ' '
-         RETURN
-      END IF
-C      
-C      CALL OUTFIL (1, BESTFIL, IER)
-C      IF (IER .NE. 0) THEN
-C         CALL STUPID ('Error opening output file '//BESTFIL)
-C         BESTFIL = 'GIVE UP'
-C         GO TO 9300
-C      END IF
-      
-      CALL WRHEAD (1, 1, NCOL, NROW, 7, LOBAD, HIBAD, THRESH, AP1, 
+      CALL WRHEAD (1, 1, NCOL, NROW, 7, LOBAD, HIBAD, THRESH, AP1,
      .     PHPADU, RONOIS, RADIUS)
 C
 C Get ready to go.
@@ -1113,10 +1046,7 @@ C--------------------------------------------------------------
       A19 = "Y"
       A20 = "CHISQ"
       A21 = "INTENSITY"
-      OPEN(24,FILE=MCMCALL,STATUS='UNKNOWN')
-      OPEN(25,FILE=MCMCFIL,STATUS='UNKNOWN')
-C      OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
-      OPEN(27,FILE=BESTFIL,STATUS='UNKNOWN')
+C      OPEN(26,FILE=CHISQPIXFIL,STATUS='REPLACE')
 
       IX10_IN = 0.0
       IY10_IN = 0.0
@@ -1125,15 +1055,50 @@ C      OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
       IF0_IN = 0.0
       ACC_ARRAY = 0.0
 
-
-      WRITE(*,*)  "1, 2, or 3 star fit:"
-      READ(*,*) FIT_STARS
+C--------------------------------------------------------------
+C     Load params.in if present in the current directory.
+C     All parameters will be read from the file; missing keys
+C     fall back to interactive terminal prompts.
+      PNLINES = 0
+      INQUIRE(FILE='params.in', EXIST=PARAMS_EXIST)
+      IF (PARAMS_EXIST) THEN
+        WRITE(*,*) "Found params.in - reading parameters from file."
+        OPEN(28, FILE='params.in', STATUS='OLD')
+ 9801   READ(28,'(A)',IOSTAT=PIOS) PBUF
+        IF (PIOS .EQ. 0) THEN
+          IF (PNLINES .LT. 50) THEN
+            PNLINES = PNLINES + 1
+            PLINES(PNLINES) = PBUF
+          ENDIF
+          GO TO 9801
+        ENDIF
+        CLOSE(28)
+        WRITE(*,"(a,I3,a)") "  Loaded ",PNLINES," lines."
+      ENDIF
+C--------------------------------------------------------------
+      CALL GET_PARAM(PLINES,PNLINES,'FIT_STARS',PVAL,PFOUND)
+      IF (PFOUND) THEN
+        READ(PVAL,*) FIT_STARS
+        WRITE(*,*) "  [params.in] FIT_STARS = ", FIT_STARS
+      ELSE
+        WRITE(*,*)  "1, 2, or 3 star fit:"
+        READ(*,*) FIT_STARS
+      ENDIF
 
       IF (FIT_STARS == 1) THEN
+       MCMCFIL     = '1star.mcmc'
+       CHISQPIXFIL = '1star.chi2pix'
+       BESTFIL     = '1star.bestfit'
        GO TO 9500
       ELSEIF (FIT_STARS == 2) THEN
+       MCMCFIL     = '2star.mcmc'
+       CHISQPIXFIL = '2star.chi2pix'
+       BESTFIL     = '2star.bestfit'
        GO TO 9600
       ELSEIF (FIT_STARS == 3) THEN
+       MCMCFIL     = '3star.mcmc'
+       CHISQPIXFIL = '3star.chi2pix'
+       BESTFIL     = '3star.bestfit'
        GO TO 9700
       ELSE
        GO TO 9900
@@ -1144,29 +1109,40 @@ C              1-STAR-FIT
 C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  9500 WRITE(*,"(a,I4.2)") "Degrees of Freedom = ",
-     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-3
-      WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
-      READ(*,*) RFAC
-      WRITE(*,*)  "Number of MCMC Iterations:"
-      READ(*,*) Steps
-      WRITE(*,*)  "Step size pixel (goal: accept. rate -> 0.1 - 0.5):"
-      READ(*,*) PSTEP
-      WRITE(*,*)  "Step size flux (goal: accept. rate -> 0.1 - 0.5):"
-      READ(*,*) FSTEP
-      WRITE(*,*) "Star x,y:"
-      READ(*,*) IX10_IN,IY10_IN
-      WRITE(*,*) "Flux Contribution (0.0 - 1.0):"
-      READ(*,*) IF0_IN
+     . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-4
+      CALL READ_DPARAM(PLINES,PNLINES,'RFAC',
+     . 'Renormalization Factor (type 1 if first time run):',RFAC)
+      CALL READ_IPARAM(PLINES,PNLINES,'STEPS',
+     . 'Number of MCMC Iterations:',Steps)
+      CALL READ_DPARAM(PLINES,PNLINES,'PSTEP',
+     . 'Step size pixel (e.g. 0.05):',PSTEP)
+      CALL READ_DPARAM(PLINES,PNLINES,'FSTEP',
+     . 'Step size flux (e.g. 0.05):',FSTEP)
+      CALL GET_PARAM(PLINES,PNLINES,'STAR1_X',PVAL,PFOUND)
+      IF (PFOUND) THEN
+        READ(PVAL,*) IX10_IN
+        CALL GET_PARAM(PLINES,PNLINES,'STAR1_Y',PVAL,PFOUND)
+        IF (PFOUND) READ(PVAL,*) IY10_IN
+      ENDIF
+      IF (.NOT. PFOUND) THEN
+        WRITE(*,*) "Star x,y:"
+        READ(*,*) IX10_IN,IY10_IN
+      ELSE
+        WRITE(*,"(a,2F10.3)") "  [params.in] Star 1 x,y =",
+     .    IX10_IN, IY10_IN
+      ENDIF
+      CALL READ_RPARAM(PLINES,PNLINES,'FLUX1',
+     . 'Flux Contribution (0.0 - 1.0):',IF0_IN)
 C--------------------------------------------------------------
 C     Parallel tempering setup
-      WRITE(*,*) "Number of PT chains (1 = standard MCMC, max 10):"
-      READ(*,*) NCHAINS
+      CALL READ_IPARAM(PLINES,PNLINES,'NCHAINS',
+     . 'Number of PT chains (1 = standard MCMC, max 10):',NCHAINS)
       IF (NCHAINS .LT. 1) NCHAINS = 1
       IF (NCHAINS .GT. MAXCHAINS) NCHAINS = MAXCHAINS
       IF (NCHAINS .GT. 1) THEN
-        WRITE(*,*) "Temperature ratio between adjacent chains",
-     .             " (e.g. 2.0):"
-        READ(*,*) TRATIO
+        CALL READ_RPARAM(PLINES,PNLINES,'TRATIO',
+     .    'Temperature ratio between adj. chains (e.g. 1.5):',
+     .    TRATIO)
       ELSE
         TRATIO = 1.0
       ENDIF
@@ -1182,19 +1158,28 @@ C--------------------------------------------------------------
 C     Gelman-Rubin convergence setup.
 C     GR_THRESH is hard-coded at 1.05 (publication-quality criterion).
 C     GR_WIN is hard-coded as 10% of Steps, capped at MAXWIN.
-      WRITE(*,*) "Convergence check interval (steps, e.g. 10000):"
-      READ(*,*) GR_CHECK
+      CALL READ_IPARAM(PLINES,PNLINES,'GR_CHECK',
+     . 'Convergence check interval (steps, e.g. 10000):',GR_CHECK)
       GR_THRESH = 1.05
       GR_WIN    = MAX(4, MIN(Steps/10, MAXWIN))
       WRITE(*,"(a,F4.2)") "  R-hat threshold (fixed): ", GR_THRESH
       WRITE(*,"(a,I8)")   "  Rolling window size:     ", GR_WIN
+      NTRIAL = 0
+C--------------------------------------------------------------
+ 9511 CONTINUE
+      IF (NTRIAL .GT. 0) THEN
+        CLOSE(25)
+        CLOSE(27)
+      ENDIF
+      OPEN(25,FILE=MCMCFIL,STATUS='REPLACE')
+      OPEN(27,FILE=BESTFIL,STATUS='REPLACE')
+      ACC_ARRAY = 0.0D0
+      CONVERGED = 0
       GR_IDX = 0
       GR_N   = 0
-      CONVERGED = 0
 C--------------------------------------------------------------
-      WRITE(24,*) A1,A2,A7,A8
       WRITE(25,*) A1,A2,A7,A8
-      OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
+      OPEN(26,FILE=CHISQPIXFIL,STATUS='REPLACE')
       WRITE(26,*) A18,A19,A20,A21
       CLOSE(26)
       WRITE(27,*) A1,A2,A7,A8
@@ -1246,13 +1231,21 @@ C     starting values for EMIN tracking and first file write.
         U = U + 1
          ENDDO
          ENDDO
+        U = 1
+        DO IX=IXMIN,IXMAX
+        DO IY=IYMIN,IYMAX
+          SGU2(U)=SQRT(16.0+MAX(DATA(IX,IY),0.)
+     .    +(0.01*MAX(DATA(IX,IY),0.))**2)
+         U = U + 1
+         ENDDO
+         ENDDO
         PTOT = 0
         FTOT = 0
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
-         PTOT = PTOT + PPU(U)
-         FTOT = FTOT + FU(U)
+         PTOT = PTOT + PPU(U)*FU(U)/SGU2(U)**2
+         FTOT = FTOT + FU(U)**2/SGU2(U)**2
          U = U + 1
          ENDDO
          ENDDO
@@ -1261,8 +1254,6 @@ C     starting values for EMIN tracking and first file write.
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
-          SGU2(U)=SQRT(16.0+MAX(DATA(IX,IY),0.)
-     .    +(0.01*MAX(DATA(IX,IY),0.))**2)
         EE0=EE0+((((DATA(IX,IY)-SKYBAR)-FU(U)*Z0)/SGU2(U))**2)/RFAC
          U = U + 1
          ENDDO
@@ -1330,8 +1321,8 @@ C--------------------------------------------------------------
            U = 1
            DO IX=IXMIN,IXMAX
            DO IY=IYMIN,IYMAX
-              PTOT = PTOT + PPU(U)
-              FTOT = FTOT + FU(U)
+              PTOT = PTOT + PPU(U)*FU(U)/SGU2(U)**2
+              FTOT = FTOT + FU(U)**2/SGU2(U)**2
               U = U + 1
               ENDDO
               ENDDO
@@ -1356,7 +1347,7 @@ C     chain 1 only, so EMIN always reflects the true posterior.
               EMIN = EEM
               ZMIN = ZM
          U = 1
-         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
+         OPEN(26,FILE=CHISQPIXFIL,STATUS='REPLACE')
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
@@ -1387,7 +1378,7 @@ C     from local minima. Only chain 1 writes to output files.
       ELSE
         PROB_RAND = RNARRAY(6)
 C       Tempered acceptance probability: exp(-delta_chi2 / T(KC))
-        PROB = EXP(-(EEM-EE0)/TEMP(KC))
+        PROB = EXP(-(EEM-EE0)/(2.0*TEMP(KC)))
         IF (PROB .GT. PROB_RAND) THEN
           PT_IX10(KC) = IX1M
           PT_IY10(KC) = IY1M
@@ -1410,21 +1401,12 @@ C         Proposal rejected: if cold chain, record current state.
       ENDDO !End inner chain loop
 C--------------------------------------------------------------
 C     Parallel tempering swap step.
-C     After all chains have taken a step, attempt to swap adjacent
-C     chains KC and KC+1. The swap probability preserves detailed
-C     balance across the joint chain ensemble:
-C       P_swap = exp( (1/T_k - 1/T_{k+1}) * (chi2_k - chi2_{k+1}) )
-C     A swap is attempted every iteration for every adjacent pair.
+C     Swap adjacent chains KC and KC+1 only when the hot chain has
+C     strictly lower chi^2 than the cold chain.
       IF (NCHAINS .GT. 1) THEN
         DO KC = 1, NCHAINS-1
           KH = KC + 1
-          CALL RANDOM_NUMBER(RNARRAY)
-          SWAP_RAND = RNARRAY(1)
-C         Compute swap acceptance probability
-          SWAP_PROB = EXP( (1.0/TEMP(KC) - 1.0/TEMP(KH)) *
-     .              (PT_EE0(KC) - PT_EE0(KH)) )
-          SWAP_PROB = MIN(1.0, SWAP_PROB)
-          IF (SWAP_PROB .GT. SWAP_RAND) THEN
+          IF (PT_EE0(KH) .LT. PT_EE0(KC)) THEN
 C           Swap positions and chi^2 between chains KC and KH
             TMPVAL = PT_IX10(KC)
             PT_IX10(KC) = PT_IX10(KH)
@@ -1441,11 +1423,15 @@ C           Swap positions and chi^2 between chains KC and KH
             TMPVAL = PT_EE0(KC)
             PT_EE0(KC) = PT_EE0(KH)
             PT_EE0(KH) = TMPVAL
+            IF (KC .EQ. 1) THEN
+              WRITE(*,"(a,I8,a,I2,a,F12.4,a,F12.4)")
+     .          "[PT-SWAP] IT=",IT," chain ",KH,
+     .          "->cold  chi2: ",TMPVAL," -> ",PT_EE0(1)
+            ENDIF
           ENDIF
         ENDDO
       ENDIF
 C--------------------------------------------------------------
-      WRITE(24,*) PT_IX10(1),PT_IY10(1),PT_IF0(1)*0.001,PT_EE0(1)
 C--------------------------------------------------------------
 C     Store cold-chain sample in rolling GR buffer
       GR_IDX = MOD(GR_IDX, GR_WIN) + 1
@@ -1476,12 +1462,32 @@ C--------------------------------------------------------------
      . "WARNING: Chain did not converge within Steps iterations."
        IF (RFAC .EQ. 1.00) WRITE(*,*)
      . "Renormalization Factor = ",
-     . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-3)
-       WRITE(*,*) "Acceptance Rate (cold chain) = ", ACC_ARRAY/IT
-       IF (ACC_ARRAY/IT .LE. 0.10) WRITE(*,*)
+     . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-4)
+       ACCEPT_RAT = ACC_ARRAY/IT
+       WRITE(*,*) "Acceptance Rate (cold chain) = ", ACCEPT_RAT
+       IF (ACCEPT_RAT .LE. 0.10D0) WRITE(*,*)
      . "WARNING!! Acceptance rate less than 0.10!"
-       IF (ACC_ARRAY/IT .GE. 0.50) WRITE(*,*)
+       IF (ACCEPT_RAT .GE. 0.50D0) WRITE(*,*)
      . "WARNING!! Acceptance rate larger than 0.50!"
+       IF (ACCEPT_RAT .LE. 0.10D0 .OR. ACCEPT_RAT .GE. 0.50D0) THEN
+         IF (NTRIAL .LT. 5) THEN
+           NTRIAL = NTRIAL + 1
+           IF (ACCEPT_RAT .LE. 0.10D0) THEN
+             PSTEP = PSTEP / 2.0D0
+             FSTEP = FSTEP / 2.0D0
+           ELSE
+             PSTEP = PSTEP * 2.0D0
+             FSTEP = FSTEP * 2.0D0
+           ENDIF
+           WRITE(*,"(a,I1,a,F8.4,a,F8.4)") "Retrying (trial ",
+     .       NTRIAL, ") with PSTEP=", PSTEP, "  FSTEP=", FSTEP
+           GO TO 9511
+         ELSE
+           WRITE(*,*)
+     .     "WARNING: Acceptance rate not optimal after 5 trials.",
+     .     " Giving up."
+         ENDIF
+       ENDIF
        WRITE(*,*) "      X1               Y1             F_TOT
      .   CHI2"
        WRITE(*,*) X1MIN,Y1MIN,
@@ -1497,33 +1503,55 @@ C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
  9600 WRITE(*,"(a,I4.2)") "Degrees of Freedom =",
      .((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-6
-      WRITE(*,*) "Pixel Scale (mas/pix):"
-      READ(*,*) PIXSCALE
-      WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
-      READ(*,*) RFAC
-      WRITE(*,*)  "Number of MCMC Iterations:"
-      READ(*,*) Steps
-      WRITE(*,*)  "Step size pixel (goal: accept. rate -> 0.1 - 0.5):"
-      READ(*,*) PSTEP
-      WRITE(*,*)  "Step size flux (goal: accept. rate -> 0.1 - 0.5):"
-      READ(*,*) FSTEP
-      WRITE(*,*) "Star 1 x,y:"
-      READ(*,*) IX10_IN,IY10_IN
-      WRITE(*,*) "Star 2 x,y:"
-      READ(*,*) IX20_IN,IY20_IN
-      WRITE(*,*) "Star 1 Flux Contribution (star 1/(star1 + star2)):"
-      WRITE(*,*) "Choose the BRIGHTER star!"
-      READ(*,*) IF0_IN
+      CALL READ_DPARAM(PLINES,PNLINES,'PIXSCALE',
+     . 'Pixel Scale (mas/pix):',PIXSCALE)
+      CALL READ_DPARAM(PLINES,PNLINES,'RFAC',
+     . 'Renormalization Factor (type 1 if first time run):',RFAC)
+      CALL READ_IPARAM(PLINES,PNLINES,'STEPS',
+     . 'Number of MCMC Iterations:',Steps)
+      CALL READ_DPARAM(PLINES,PNLINES,'PSTEP',
+     . 'Step size pixel (e.g. 0.05):',PSTEP)
+      CALL READ_DPARAM(PLINES,PNLINES,'FSTEP',
+     . 'Step size flux (e.g. 0.05):',FSTEP)
+      CALL GET_PARAM(PLINES,PNLINES,'STAR1_X',PVAL,PFOUND)
+      IF (PFOUND) THEN
+        READ(PVAL,*) IX10_IN
+        CALL GET_PARAM(PLINES,PNLINES,'STAR1_Y',PVAL,PFOUND)
+        IF (PFOUND) READ(PVAL,*) IY10_IN
+      ENDIF
+      IF (.NOT. PFOUND) THEN
+        WRITE(*,*) "Star 1 x,y:"
+        READ(*,*) IX10_IN,IY10_IN
+      ELSE
+        WRITE(*,"(a,2F10.3)") "  [params.in] Star 1 x,y =",
+     .    IX10_IN, IY10_IN
+      ENDIF
+      CALL GET_PARAM(PLINES,PNLINES,'STAR2_X',PVAL,PFOUND)
+      IF (PFOUND) THEN
+        READ(PVAL,*) IX20_IN
+        CALL GET_PARAM(PLINES,PNLINES,'STAR2_Y',PVAL,PFOUND)
+        IF (PFOUND) READ(PVAL,*) IY20_IN
+      ENDIF
+      IF (.NOT. PFOUND) THEN
+        WRITE(*,*) "Star 2 x,y:"
+        READ(*,*) IX20_IN,IY20_IN
+      ELSE
+        WRITE(*,"(a,2F10.3)") "  [params.in] Star 2 x,y =",
+     .    IX20_IN, IY20_IN
+      ENDIF
+      CALL READ_RPARAM(PLINES,PNLINES,'FLUX1',
+     . 'Star 1 Flux Contrib. (brighter, star1/(star1+star2)):',
+     . IF0_IN)
 C--------------------------------------------------------------
 C     Parallel tempering setup
-      WRITE(*,*) "Number of PT chains (1 = standard MCMC, max 10):"
-      READ(*,*) NCHAINS
+      CALL READ_IPARAM(PLINES,PNLINES,'NCHAINS',
+     . 'Number of PT chains (1 = standard MCMC, max 10):',NCHAINS)
       IF (NCHAINS .LT. 1) NCHAINS = 1
       IF (NCHAINS .GT. MAXCHAINS) NCHAINS = MAXCHAINS
       IF (NCHAINS .GT. 1) THEN
-        WRITE(*,*) "Temperature ratio between adjacent chains",
-     .             " (e.g. 2.0):"
-        READ(*,*) TRATIO
+        CALL READ_RPARAM(PLINES,PNLINES,'TRATIO',
+     .    'Temperature ratio between adj. chains (e.g. 1.5):',
+     .    TRATIO)
       ELSE
         TRATIO = 1.0
       ENDIF
@@ -1538,19 +1566,28 @@ C--------------------------------------------------------------
 C     Gelman-Rubin convergence setup.
 C     GR_THRESH is hard-coded at 1.05 (publication-quality criterion).
 C     GR_WIN is hard-coded as 10% of Steps, capped at MAXWIN.
-      WRITE(*,*) "Convergence check interval (steps, e.g. 10000):"
-      READ(*,*) GR_CHECK
+      CALL READ_IPARAM(PLINES,PNLINES,'GR_CHECK',
+     . 'Convergence check interval (steps, e.g. 10000):',GR_CHECK)
       GR_THRESH = 1.05
       GR_WIN    = MAX(4, MIN(Steps/10, MAXWIN))
       WRITE(*,"(a,F4.2)") "  R-hat threshold (fixed): ", GR_THRESH
       WRITE(*,"(a,I8)")   "  Rolling window size:     ", GR_WIN
+      NTRIAL = 0
+C--------------------------------------------------------------
+ 9611 CONTINUE
+      IF (NTRIAL .GT. 0) THEN
+        CLOSE(25)
+        CLOSE(27)
+      ENDIF
+      OPEN(25,FILE=MCMCFIL,STATUS='REPLACE')
+      OPEN(27,FILE=BESTFIL,STATUS='REPLACE')
+      ACC_ARRAY = 0.0D0
+      CONVERGED = 0
       GR_IDX = 0
       GR_N   = 0
-      CONVERGED = 0
 C--------------------------------------------------------------
-      WRITE(24,*) A1,A2,A3,A4,A5,A15,A16,A8
       WRITE(25,*) A1,A2,A3,A4,A5,A15,A16,A8
-      OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
+      OPEN(26,FILE=CHISQPIXFIL,STATUS='REPLACE')
       WRITE(26,*) A18,A19,A20,A21
       CLOSE(26)
       WRITE(27,*) A1,A2,A3,A4,A5,A15,A16,A8
@@ -1609,13 +1646,21 @@ C         Clamp perturbed flux to physical range
         U = U + 1
          ENDDO
          ENDDO
+        U = 1
+        DO IX=IXMIN,IXMAX
+        DO IY=IYMIN,IYMAX
+          SGU2(U)=SQRT(16.0+MAX(DATA(IX,IY),0.)
+     .    +(0.01*MAX(DATA(IX,IY),0.))**2)
+         U = U + 1
+         ENDDO
+         ENDDO
         PTOT = 0
         FTOT = 0
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
-         PTOT = PTOT + PPU(U)
-         FTOT = FTOT + FU(U)
+         PTOT = PTOT + PPU(U)*FU(U)/SGU2(U)**2
+         FTOT = FTOT + FU(U)**2/SGU2(U)**2
          U = U + 1
          ENDDO
          ENDDO
@@ -1624,8 +1669,6 @@ C         Clamp perturbed flux to physical range
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
-          SGU2(U)=SQRT(16.0+MAX(DATA(IX,IY),0.)
-     .    +(0.01*MAX(DATA(IX,IY),0.))**2)
         EE0=EE0+((((DATA(IX,IY)-SKYBAR)-FU(U)*Z0)/SGU2(U))**2)/RFAC
          U = U + 1
          ENDDO
@@ -1699,8 +1742,8 @@ C--------------------------------------------------------------
            U = 1
            DO IX=IXMIN,IXMAX
            DO IY=IYMIN,IYMAX
-              PTOT = PTOT + PPU(U)
-              FTOT = FTOT + FU(U)
+              PTOT = PTOT + PPU(U)*FU(U)/SGU2(U)**2
+              FTOT = FTOT + FU(U)**2/SGU2(U)**2
               U = U + 1
               ENDDO
               ENDDO
@@ -1726,7 +1769,7 @@ C--------------------------------------------------------------
               EMIN = EEM
               SSEPMIN = PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2)
          U = 1
-         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
+         OPEN(26,FILE=CHISQPIXFIL,STATUS='REPLACE')
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
@@ -1755,7 +1798,7 @@ C--------------------------------------------------------------
         ENDIF
       ELSE
         PROB_RAND = RNARRAY(6)
-        PROB = EXP(-(EEM-EE0)/TEMP(KC))
+        PROB = EXP(-(EEM-EE0)/(2.0*TEMP(KC)))
         IF (PROB .GT. PROB_RAND) THEN
           PT_IX10(KC) = IX1M
           PT_IX20(KC) = IX2M
@@ -1773,7 +1816,7 @@ C--------------------------------------------------------------
         ELSE
           IF (KC .EQ. 1) THEN
             SSEP = PIXSCALE*SQRT((PT_IX10(1)-PT_IX20(1))**2+
-     .             (PT_IY10(1)-PT_IY20(1))**2)*PIXSCALE
+     .             (PT_IY10(1)-PT_IY20(1))**2)
             WRITE(25,*) 1.0*PT_IX10(1),1.0*PT_IY10(1),
      .        1.0*PT_IX20(1),1.0*PT_IY20(1),SSEP,
      .        PT_IF0(1)*0.001,(1-PT_IF0(1)*.001),PT_EE0(1)
@@ -1787,12 +1830,7 @@ C     Parallel tempering swap step (2-star)
       IF (NCHAINS .GT. 1) THEN
         DO KC = 1, NCHAINS-1
           KH = KC + 1
-          CALL RANDOM_NUMBER(RNARRAY)
-          SWAP_RAND = RNARRAY(1)
-          SWAP_PROB = EXP( (1.0/TEMP(KC) - 1.0/TEMP(KH)) *
-     .              (PT_EE0(KC) - PT_EE0(KH)) )
-          SWAP_PROB = MIN(1.0, SWAP_PROB)
-          IF (SWAP_PROB .GT. SWAP_RAND) THEN
+          IF (PT_EE0(KH) .LT. PT_EE0(KC)) THEN
             TMPVAL = PT_IX10(KC)
             PT_IX10(KC) = PT_IX10(KH)
             PT_IX10(KH) = TMPVAL
@@ -1814,14 +1852,17 @@ C     Parallel tempering swap step (2-star)
             TMPVAL = PT_EE0(KC)
             PT_EE0(KC) = PT_EE0(KH)
             PT_EE0(KH) = TMPVAL
+            IF (KC .EQ. 1) THEN
+              WRITE(*,"(a,I8,a,I2,a,F12.4,a,F12.4)")
+     .          "[PT-SWAP] IT=",IT," chain ",KH,
+     .          "->cold  chi2: ",TMPVAL," -> ",PT_EE0(1)
+            ENDIF
           ENDIF
         ENDDO
       ENDIF
 C--------------------------------------------------------------
       SSEP = PIXSCALE*SQRT((PT_IX10(1)-PT_IX20(1))**2+
      .       (PT_IY10(1)-PT_IY20(1))**2)
-      WRITE(24,*) PT_IX10(1),PT_IY10(1),PT_IX20(1),PT_IY20(1),
-     .  SSEP,PT_IF0(1)*0.001,(1-PT_IF0(1)*.001),PT_EE0(1)
 C--------------------------------------------------------------
 C     Store cold-chain sample in rolling GR buffer
       GR_IDX = MOD(GR_IDX, GR_WIN) + 1
@@ -1860,11 +1901,31 @@ C--------------------------------------------------------------
        IF (RFAC .EQ. 1.00) WRITE(*,*)
      . "Renormalization Factor = ",
      . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-6)
-       WRITE(*,*) "Acceptance Rate (cold chain) = ", ACC_ARRAY/IT
-       IF (ACC_ARRAY/IT .LE. 0.10) WRITE(*,*)
+       ACCEPT_RAT = ACC_ARRAY/IT
+       WRITE(*,*) "Acceptance Rate (cold chain) = ", ACCEPT_RAT
+       IF (ACCEPT_RAT .LE. 0.10D0) WRITE(*,*)
      . "WARNING!! Acceptance rate less than 0.10!"
-       IF (ACC_ARRAY/IT .GE. 0.50) WRITE(*,*)
+       IF (ACCEPT_RAT .GE. 0.50D0) WRITE(*,*)
      . "WARNING!! Acceptance rate larger than 0.50!"
+       IF (ACCEPT_RAT .LE. 0.10D0 .OR. ACCEPT_RAT .GE. 0.50D0) THEN
+         IF (NTRIAL .LT. 5) THEN
+           NTRIAL = NTRIAL + 1
+           IF (ACCEPT_RAT .LE. 0.10D0) THEN
+             PSTEP = PSTEP / 2.0D0
+             FSTEP = FSTEP / 2.0D0
+           ELSE
+             PSTEP = PSTEP * 2.0D0
+             FSTEP = FSTEP * 2.0D0
+           ENDIF
+           WRITE(*,"(a,I1,a,F8.4,a,F8.4)") "Retrying (trial ",
+     .       NTRIAL, ") with PSTEP=", PSTEP, "  FSTEP=", FSTEP
+           GO TO 9611
+         ELSE
+           WRITE(*,*)
+     .     "WARNING: Acceptance rate not optimal after 5 trials.",
+     .     " Giving up."
+         ENDIF
+       ENDIF
        WRITE(*,*) "      X1               Y1               X2
      .    Y2                SEP                    F1                F2
      .             CHI2"
@@ -1882,38 +1943,71 @@ C==============================================================
 C-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
  9700 WRITE(*,"(a,I4.2)") "Degrees of Freedom =  ",
      . ((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-9
-      WRITE(*,*) "Pixel Scale (mas/pix):"
-      READ(*,*) PIXSCALE
-      WRITE(*,*) "Renormalization Factor (type '1' if first time run):"
-      READ(*,*) RFAC
-      WRITE(*,*)  "Number of MCMC Iterations:"
-      READ(*,*) Steps
-      WRITE(*,*)  "Step size pixel (goal: accept. rate -> 0.1 - 0.5):"
-      READ(*,*) PSTEP
-      WRITE(*,*)  "Step size flux (goal: accept. rate -> 0.1 - 0.5):"
-      READ(*,*) FSTEP
-      WRITE(*,*) "Star 1 x,y:"
-      READ(*,*) IX10_IN,IY10_IN
-      WRITE(*,*) "Star 2 x,y:"
-      READ(*,*) IX20_IN,IY20_IN
-      WRITE(*,*) "Star 3 x,y:"
-      READ(*,*) IX30_IN,IY30_IN
-      WRITE(*,*) "Star 1 Flux Contrib. (star1 / (star1+star2+star3)):"
-      WRITE(*,*) "Choose the BRIGHTEST star!"
-      READ(*,*) IF0_IN
-      WRITE(*,*) "Star 3 Flux Contrib. (star3 / (star1+star2+star3)):"
-      WRITE(*,*) "Choose the FAINTEST star!"
-      READ(*,*) IFB0_IN
+      CALL READ_DPARAM(PLINES,PNLINES,'PIXSCALE',
+     . 'Pixel Scale (mas/pix):',PIXSCALE)
+      CALL READ_DPARAM(PLINES,PNLINES,'RFAC',
+     . 'Renormalization Factor (type 1 if first time run):',RFAC)
+      CALL READ_IPARAM(PLINES,PNLINES,'STEPS',
+     . 'Number of MCMC Iterations:',Steps)
+      CALL READ_DPARAM(PLINES,PNLINES,'PSTEP',
+     . 'Step size pixel (e.g. 0.05):',PSTEP)
+      CALL READ_DPARAM(PLINES,PNLINES,'FSTEP',
+     . 'Step size flux (e.g. 0.05):',FSTEP)
+      CALL GET_PARAM(PLINES,PNLINES,'STAR1_X',PVAL,PFOUND)
+      IF (PFOUND) THEN
+        READ(PVAL,*) IX10_IN
+        CALL GET_PARAM(PLINES,PNLINES,'STAR1_Y',PVAL,PFOUND)
+        IF (PFOUND) READ(PVAL,*) IY10_IN
+      ENDIF
+      IF (.NOT. PFOUND) THEN
+        WRITE(*,*) "Star 1 x,y:"
+        READ(*,*) IX10_IN,IY10_IN
+      ELSE
+        WRITE(*,"(a,2F10.3)") "  [params.in] Star 1 x,y =",
+     .    IX10_IN, IY10_IN
+      ENDIF
+      CALL GET_PARAM(PLINES,PNLINES,'STAR2_X',PVAL,PFOUND)
+      IF (PFOUND) THEN
+        READ(PVAL,*) IX20_IN
+        CALL GET_PARAM(PLINES,PNLINES,'STAR2_Y',PVAL,PFOUND)
+        IF (PFOUND) READ(PVAL,*) IY20_IN
+      ENDIF
+      IF (.NOT. PFOUND) THEN
+        WRITE(*,*) "Star 2 x,y:"
+        READ(*,*) IX20_IN,IY20_IN
+      ELSE
+        WRITE(*,"(a,2F10.3)") "  [params.in] Star 2 x,y =",
+     .    IX20_IN, IY20_IN
+      ENDIF
+      CALL GET_PARAM(PLINES,PNLINES,'STAR3_X',PVAL,PFOUND)
+      IF (PFOUND) THEN
+        READ(PVAL,*) IX30_IN
+        CALL GET_PARAM(PLINES,PNLINES,'STAR3_Y',PVAL,PFOUND)
+        IF (PFOUND) READ(PVAL,*) IY30_IN
+      ENDIF
+      IF (.NOT. PFOUND) THEN
+        WRITE(*,*) "Star 3 x,y:"
+        READ(*,*) IX30_IN,IY30_IN
+      ELSE
+        WRITE(*,"(a,2F10.3)") "  [params.in] Star 3 x,y =",
+     .    IX30_IN, IY30_IN
+      ENDIF
+      CALL READ_RPARAM(PLINES,PNLINES,'FLUX1',
+     . 'Star 1 Flux (brightest, star1/(star1+star2+star3)):',
+     . IF0_IN)
+      CALL READ_RPARAM(PLINES,PNLINES,'FLUX3',
+     . 'Star 3 Flux (faintest, star3/(star1+star2+star3)):',
+     . IFB0_IN)
 C--------------------------------------------------------------
 C     Parallel tempering setup
-      WRITE(*,*) "Number of PT chains (1 = standard MCMC, max 10):"
-      READ(*,*) NCHAINS
+      CALL READ_IPARAM(PLINES,PNLINES,'NCHAINS',
+     . 'Number of PT chains (1 = standard MCMC, max 10):',NCHAINS)
       IF (NCHAINS .LT. 1) NCHAINS = 1
       IF (NCHAINS .GT. MAXCHAINS) NCHAINS = MAXCHAINS
       IF (NCHAINS .GT. 1) THEN
-        WRITE(*,*) "Temperature ratio between adjacent chains",
-     .             " (e.g. 2.0):"
-        READ(*,*) TRATIO
+        CALL READ_RPARAM(PLINES,PNLINES,'TRATIO',
+     .    'Temperature ratio between adj. chains (e.g. 1.5):',
+     .    TRATIO)
       ELSE
         TRATIO = 1.0
       ENDIF
@@ -1928,19 +2022,28 @@ C--------------------------------------------------------------
 C     Gelman-Rubin convergence setup.
 C     GR_THRESH is hard-coded at 1.05 (publication-quality criterion).
 C     GR_WIN is hard-coded as 10% of Steps, capped at MAXWIN.
-      WRITE(*,*) "Convergence check interval (steps, e.g. 10000):"
-      READ(*,*) GR_CHECK
+      CALL READ_IPARAM(PLINES,PNLINES,'GR_CHECK',
+     . 'Convergence check interval (steps, e.g. 10000):',GR_CHECK)
       GR_THRESH = 1.05
       GR_WIN    = MAX(4, MIN(Steps/10, MAXWIN))
       WRITE(*,"(a,F4.2)") "  R-hat threshold (fixed): ", GR_THRESH
       WRITE(*,"(a,I8)")   "  Rolling window size:     ", GR_WIN
+      NTRIAL = 0
+C--------------------------------------------------------------
+ 9711 CONTINUE
+      IF (NTRIAL .GT. 0) THEN
+        CLOSE(25)
+        CLOSE(27)
+      ENDIF
+      OPEN(25,FILE=MCMCFIL,STATUS='REPLACE')
+      OPEN(27,FILE=BESTFIL,STATUS='REPLACE')
+      ACC_ARRAY = 0.0D0
+      CONVERGED = 0
       GR_IDX = 0
       GR_N   = 0
-      CONVERGED = 0
 C--------------------------------------------------------------
-      WRITE(24,*) A1,A2,A3,A4,A9,A10,A11,A12,A15,A16,A17,A8
       WRITE(25,*) A1,A2,A3,A4,A9,A10,A11,A12,A15,A16,A17,A8
-      OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
+      OPEN(26,FILE=CHISQPIXFIL,STATUS='REPLACE')
       WRITE(26,*) A18,A19,A20,A21
       CLOSE(26)
       WRITE(27,*) A1,A2,A3,A4,A9,A10,A11,A12,A15,A16,A17,A8
@@ -2019,13 +2122,21 @@ C         Clamp perturbed fluxes to physical range
         U = U + 1
          ENDDO
          ENDDO
+        U = 1
+        DO IX=IXMIN,IXMAX
+        DO IY=IYMIN,IYMAX
+          SGU2(U)=SQRT(16.0+MAX(DATA(IX,IY),0.)
+     .    +(0.01*MAX(DATA(IX,IY),0.))**2)
+         U = U + 1
+         ENDDO
+         ENDDO
         PTOT = 0
         FTOT = 0
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
-         PTOT = PTOT + PPU(U)
-         FTOT = FTOT + FU(U)
+         PTOT = PTOT + PPU(U)*FU(U)/SGU2(U)**2
+         FTOT = FTOT + FU(U)**2/SGU2(U)**2
          U = U + 1
          ENDDO
          ENDDO
@@ -2034,8 +2145,6 @@ C         Clamp perturbed fluxes to physical range
         U = 1
         DO IX=IXMIN,IXMAX
         DO IY=IYMIN,IYMAX
-          SGU2(U)=SQRT(16.0+MAX(DATA(IX,IY),0.)
-     .    +(0.01*MAX(DATA(IX,IY),0.))**2)
         EE0=EE0+((((DATA(IX,IY)-SKYBAR)-FU(U)*Z0)/SGU2(U))**2)/RFAC
          U = U + 1
          ENDDO
@@ -2127,8 +2236,8 @@ C--------------------------------------------------------------
            U = 1
            DO IX=IXMIN,IXMAX
            DO IY=IYMIN,IYMAX
-              PTOT = PTOT + PPU(U)
-              FTOT = FTOT + FU(U)
+              PTOT = PTOT + PPU(U)*FU(U)/SGU2(U)**2
+              FTOT = FTOT + FU(U)**2/SGU2(U)**2
               U = U + 1
               ENDDO
               ENDDO
@@ -2158,7 +2267,7 @@ C--------------------------------------------------------------
               LSSEPMIN=PIXSCALE*SQRT((X1MIN-X2MIN)**2+(Y1MIN-Y2MIN)**2)
               BSEPMIN=PIXSCALE*SQRT((X1MIN-X3MIN)**2+(Y1MIN-Y3MIN)**2)
          U = 1
-         OPEN(26,FILE=CHISQPIXFIL,STATUS='UNKNOWN')
+         OPEN(26,FILE=CHISQPIXFIL,STATUS='REPLACE')
          DO IX=IXMIN,IXMAX
          DO IY=IYMIN,IYMAX
         FU_MIN(U) = FU(U)
@@ -2191,7 +2300,7 @@ C--------------------------------------------------------------
         ENDIF
       ELSE
         PROB_RAND = RNARRAY(9)
-        PROB = EXP(-(EEM-EE0)/TEMP(KC))
+        PROB = EXP(-(EEM-EE0)/(2.0*TEMP(KC)))
         IF (PROB .GT. PROB_RAND) THEN
           PT_IX10(KC) = IX1M
           PT_IX20(KC) = IX2M
@@ -2232,12 +2341,7 @@ C     Parallel tempering swap step (3-star)
       IF (NCHAINS .GT. 1) THEN
         DO KC = 1, NCHAINS-1
           KH = KC + 1
-          CALL RANDOM_NUMBER(RNARRAY)
-          SWAP_RAND = RNARRAY(1)
-          SWAP_PROB = EXP( (1.0/TEMP(KC) - 1.0/TEMP(KH)) *
-     .              (PT_EE0(KC) - PT_EE0(KH)) )
-          SWAP_PROB = MIN(1.0, SWAP_PROB)
-          IF (SWAP_PROB .GT. SWAP_RAND) THEN
+          IF (PT_EE0(KH) .LT. PT_EE0(KC)) THEN
             TMPVAL = PT_IX10(KC)
             PT_IX10(KC) = PT_IX10(KH)
             PT_IX10(KH) = TMPVAL
@@ -2268,6 +2372,11 @@ C     Parallel tempering swap step (3-star)
             TMPVAL = PT_EE0(KC)
             PT_EE0(KC) = PT_EE0(KH)
             PT_EE0(KH) = TMPVAL
+            IF (KC .EQ. 1) THEN
+              WRITE(*,"(a,I8,a,I2,a,F12.4,a,F12.4)")
+     .          "[PT-SWAP] IT=",IT," chain ",KH,
+     .          "->cold  chi2: ",TMPVAL," -> ",PT_EE0(1)
+            ENDIF
           ENDIF
         ENDDO
       ENDIF
@@ -2276,9 +2385,6 @@ C--------------------------------------------------------------
      .        (PT_IY10(1)-PT_IY20(1))**2)
       BSEP  = PIXSCALE*SQRT((PT_IX10(1)-PT_IX30(1))**2+
      .        (PT_IY10(1)-PT_IY30(1))**2)
-      WRITE(24,*) PT_IX10(1),PT_IY10(1),PT_IX20(1),PT_IY20(1),
-     . PT_IX30(1),PT_IY30(1),LSSEP,BSEP,PT_IF0(1)*0.001,
-     . (1-PT_IF0(1)*.001-PT_IFB0(1)*.001),(PT_IFB0(1)*.001),PT_EE0(1)
 C--------------------------------------------------------------
 C     Store cold-chain sample in rolling GR buffer
       GR_IDX = MOD(GR_IDX, GR_WIN) + 1
@@ -2326,11 +2432,31 @@ C--------------------------------------------------------------
        IF (RFAC .EQ. 1.00) WRITE(*,*)
      . "Renormalization Factor = ",
      . EMIN/(((IXMAX-IXMIN+1)*(IYMAX-IYMIN+1))-9)
-       WRITE(*,*) "Acceptance Rate (cold chain) = ", ACC_ARRAY/IT
-       IF (ACC_ARRAY/IT .LE. 0.10) WRITE(*,*)
+       ACCEPT_RAT = ACC_ARRAY/IT
+       WRITE(*,*) "Acceptance Rate (cold chain) = ", ACCEPT_RAT
+       IF (ACCEPT_RAT .LE. 0.10D0) WRITE(*,*)
      . "WARNING!! Acceptance rate less than 0.10!"
-       IF (ACC_ARRAY/IT .GE. 0.50) WRITE(*,*)
+       IF (ACCEPT_RAT .GE. 0.50D0) WRITE(*,*)
      . "WARNING!! Acceptance rate larger than 0.50!"
+       IF (ACCEPT_RAT .LE. 0.10D0 .OR. ACCEPT_RAT .GE. 0.50D0) THEN
+         IF (NTRIAL .LT. 5) THEN
+           NTRIAL = NTRIAL + 1
+           IF (ACCEPT_RAT .LE. 0.10D0) THEN
+             PSTEP = PSTEP / 2.0D0
+             FSTEP = FSTEP / 2.0D0
+           ELSE
+             PSTEP = PSTEP * 2.0D0
+             FSTEP = FSTEP * 2.0D0
+           ENDIF
+           WRITE(*,"(a,I1,a,F8.4,a,F8.4)") "Retrying (trial ",
+     .       NTRIAL, ") with PSTEP=", PSTEP, "  FSTEP=", FSTEP
+           GO TO 9711
+         ELSE
+           WRITE(*,*)
+     .     "WARNING: Acceptance rate not optimal after 5 trials.",
+     .     " Giving up."
+         ENDIF
+       ENDIF
        WRITE(*,*) "      X1               Y1               X2
      .    Y2               X3               Y3           1-2SEP
      .   1-3SEP           F1              F2           F3
@@ -2356,7 +2482,6 @@ C
 C Normal return.
 C
  9000 CONTINUE
-      CLOSE(24)
       CLOSE(25)
       CLOSE(26)
       CLOSE(27)
@@ -2488,6 +2613,103 @@ C     Guard against degenerate case (zero variance -> converged)
         RHAT = 1.0
       ELSE
         RHAT = SQRT(VARHAT / W)
+      ENDIF
+      RETURN
+      END
+
+C=======================================================================
+C  GET_PARAM: Search LINES(1:NLINES) for a 'KEY = value' entry.
+C  Lines starting with '#' or blank are skipped.
+C  On success, VAL holds the trimmed value string, FOUND=.TRUE.
+C  KEY comparison is case-sensitive; use all-caps keys in params.in.
+C=======================================================================
+      SUBROUTINE GET_PARAM(LINES, NLINES, KEY, VAL, FOUND)
+      IMPLICIT NONE
+      INTEGER NLINES
+      CHARACTER*256 LINES(*), VAL, LBUF, LKEY
+      CHARACTER*(*) KEY
+      LOGICAL FOUND
+      INTEGER I, EQ, KL
+      FOUND = .FALSE.
+      VAL = ' '
+      IF (NLINES .LE. 0) RETURN
+      KL = LEN_TRIM(KEY)
+      DO I = 1, NLINES
+        LBUF = ADJUSTL(LINES(I))
+        IF (LEN_TRIM(LBUF) .EQ. 0) CYCLE
+        IF (LBUF(1:1) .EQ. '#') CYCLE
+        EQ = INDEX(LBUF, '=')
+        IF (EQ .LE. 1) CYCLE
+        LKEY = ADJUSTL(LBUF(1:EQ-1))
+        IF (LEN_TRIM(LKEY) .EQ. KL .AND.
+     .      LKEY(1:KL) .EQ. KEY(1:KL)) THEN
+          VAL = ADJUSTL(LBUF(EQ+1:))
+          FOUND = .TRUE.
+          RETURN
+        ENDIF
+      ENDDO
+      RETURN
+      END
+
+C=======================================================================
+C  READ_RPARAM: Read a REAL parameter from params.in or from stdin.
+C=======================================================================
+      SUBROUTINE READ_RPARAM(LINES, NLINES, KEY, PROMPT, VAR)
+      IMPLICIT NONE
+      INTEGER NLINES
+      CHARACTER*256 LINES(*), PVAL
+      CHARACTER*(*) KEY, PROMPT
+      REAL VAR
+      LOGICAL PFOUND
+      CALL GET_PARAM(LINES, NLINES, KEY, PVAL, PFOUND)
+      IF (PFOUND) THEN
+        READ(PVAL,*) VAR
+        WRITE(*,*) '  [params.in] ',TRIM(KEY),' = ',VAR
+      ELSE
+        WRITE(*,*) PROMPT
+        READ(*,*) VAR
+      ENDIF
+      RETURN
+      END
+
+C=======================================================================
+C  READ_DPARAM: Read a REAL*8 parameter from params.in or from stdin.
+C=======================================================================
+      SUBROUTINE READ_DPARAM(LINES, NLINES, KEY, PROMPT, VAR)
+      IMPLICIT NONE
+      INTEGER NLINES
+      CHARACTER*256 LINES(*), PVAL
+      CHARACTER*(*) KEY, PROMPT
+      REAL*8 VAR
+      LOGICAL PFOUND
+      CALL GET_PARAM(LINES, NLINES, KEY, PVAL, PFOUND)
+      IF (PFOUND) THEN
+        READ(PVAL,*) VAR
+        WRITE(*,*) '  [params.in] ',TRIM(KEY),' = ',VAR
+      ELSE
+        WRITE(*,*) PROMPT
+        READ(*,*) VAR
+      ENDIF
+      RETURN
+      END
+
+C=======================================================================
+C  READ_IPARAM: Read an INTEGER parameter from params.in or from stdin.
+C=======================================================================
+      SUBROUTINE READ_IPARAM(LINES, NLINES, KEY, PROMPT, VAR)
+      IMPLICIT NONE
+      INTEGER NLINES
+      CHARACTER*256 LINES(*), PVAL
+      CHARACTER*(*) KEY, PROMPT
+      INTEGER VAR
+      LOGICAL PFOUND
+      CALL GET_PARAM(LINES, NLINES, KEY, PVAL, PFOUND)
+      IF (PFOUND) THEN
+        READ(PVAL,*) VAR
+        WRITE(*,*) '  [params.in] ',TRIM(KEY),' = ',VAR
+      ELSE
+        WRITE(*,*) PROMPT
+        READ(*,*) VAR
       ENDIF
       RETURN
       END
